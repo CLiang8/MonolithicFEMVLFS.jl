@@ -234,7 +234,7 @@ else
   U_Γη = TrialFESpace(V_Γη)
 end
 
-# 振子自由度常数有限元空间：定义在膜面 Γη 上
+# oscillator FESpace
 # reffe_const = ReferenceFE(lagrangian, Float64, 0)  # constant FE
 # V_q = TestFESpace(Γη, reffe_const, conformity=:L2,
 #   vector_type=Vector{ComplexF64})
@@ -290,10 +290,10 @@ else
     ∫(  βₕ*(u + αₕ*w)*(g*κ - im*ω*ϕ) + im*ω*w*κ 
       - μ₂ₒᵤₜ*κ*w + μ₁ₒᵤₜ*∇ₙ(ϕ)*(u + αₕ*w) )dΓd2    +
     ∫(  v*(g*η - im*ω*ϕ) +  im*ω*w*η
-      - mᵨ*v*ω^2*η + Tᵨ*(1-im*ω*τ)*∇(v)⋅∇(η) )dΓm  #+ #membrane
+      - mᵨ*v*ω^2*η + Tᵨ*(1-im*ω*τ)*∇(v)⋅∇(η) )dΓm  + #membrane
     # ∫(- Tᵨ*(1-im*ω*τ)*v*∇(η)⋅nΛmb )dΛmb #diri BC
-    # ∫( (im*ω*c_sρ - k_sρ)*(q - η)*v )dΓm + # oscillation coupling new term
-    # ∫( (-m_s*ω^2 - im*ω*c_s + k_s)*q*ξ - (-im*ω*c_s + k_s)*η*ξ )dΓm # oscillation gov
+    ∫( (im*ω*c_sρ - k_sρ)*(q - η)*v )dΓm + # oscillation coupling new term
+    ∫( (-m_s*ω^2 - im*ω*c_s + k_s)*q*ξ - (-im*ω*c_s + k_s)*η*ξ )dΓm # oscillation gov
 end
 
 l((w,u,v,ξ)) =  ∫( w*vxᵢₙ )dΓin - ∫( ηd*w - ∇ₙϕd*(u + αₕ*w) )dΓd1
