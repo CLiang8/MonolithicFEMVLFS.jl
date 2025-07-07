@@ -23,7 +23,7 @@ H0 = 10 #m #still-water depth
 @show mᵨ = 0.9 #mass per unit area of membrane / ρw
 @show Tᵨ = 0.1/4*g*Lm*Lm #T/ρw
 @show τ = 0.0#damping coeff
-diriFlag = false
+diriFlag = true
 
 # Wave parameters
 ω = 2.40#3.45#2.0#2.4
@@ -276,8 +276,8 @@ if(diriFlag)
       - μ₂ₒᵤₜ*κ*w + μ₁ₒᵤₜ*∇ₙ(ϕ)*(u + αₕ*w) )dΓd2    +
     ∫(  v*(g*η - im*ω*ϕ) +  im*ω*w*η
       - mᵨ*v*ω^2*η + Tᵨ*(1-im*ω*τ)*∇(v)⋅∇(η) )dΓm  + #membrane
-    ∫(- Tᵨ*(1-im*ω*τ)*v*∇(η)⋅nΛmb )dΛmb #diri BC
-    ∫( (im*ω*c_sρ - k_sρ)*(q - η)*v )dΓm + # oscillation coupling new term
+    ∫(- Tᵨ*(1-im*ω*τ)*v*∇(η)⋅nΛmb )dΛmb + #diri BC
+    ∫( (-im*ω*c_sρ + k_sρ)*(q - η)*v )dΓm + # oscillation coupling new term
     ∫( (-m_s*ω^2 - im*ω*c_s + k_s)*q*ξ - (-im*ω*c_s + k_s)*η*ξ )dΓm # oscillation gov
     
 else
@@ -291,8 +291,8 @@ else
       - μ₂ₒᵤₜ*κ*w + μ₁ₒᵤₜ*∇ₙ(ϕ)*(u + αₕ*w) )dΓd2    +
     ∫(  v*(g*η - im*ω*ϕ) +  im*ω*w*η
       - mᵨ*v*ω^2*η + Tᵨ*(1-im*ω*τ)*∇(v)⋅∇(η) )dΓm  + #membrane
-    # ∫(- Tᵨ*(1-im*ω*τ)*v*∇(η)⋅nΛmb )dΛmb #diri BC
-    ∫( (im*ω*c_sρ - k_sρ)*(q - η)*v )dΓm + # oscillation coupling new term
+    # ∫(- Tᵨ*(1-im*ω*τ)*v*∇(η)⋅nΛmb )dΛmb + #diri BC
+    ∫( (-im*ω*c_sρ + k_sρ)*(q - η)*v )dΓm + # oscillation coupling new term
     ∫( (-m_s*ω^2 - im*ω*c_s + k_s)*q*ξ - (-im*ω*c_s + k_s)*η*ξ )dΓm # oscillation gov
 end
 
@@ -322,6 +322,7 @@ sort!(prxΓκ)
 
 κr = κₕ - κin
 # qₕ = getindex(q_vecₕ, 1) + im * getindex(q_vecₕ, 2) #trial
+qₕ_c = map(x -> x[1], qₕ)
 
 if vtk_output == true
   writevtk(Ω,filename * "_O_sol.vtu",
@@ -337,7 +338,7 @@ if vtk_output == true
     cellfields = ["eta_re" => real(ηₕ),"eta_im" => imag(ηₕ),
     "eta_abs" => abs(ηₕ), "eta_ang" => angle∘(ηₕ)])
   writevtk(Γη, filename * "_Gq_sol.vtu",
-    cellfields = ["q_abs" => abs(qₕ), "q_re" => real(qₕ), "q_im" => imag(qₕ)])
+    cellfields = ["q_abs" => abs(qₕ_c), "q_re" => real(qₕ_c), "q_im" => imag(qₕ_c)])
 end
 
 # Energy flux (Power) calculation
