@@ -15,7 +15,6 @@ function run_freq(ω, A, α)
   k = dispersionRelAng(H0, ω; msg=false)
   λ = 2π/k   
   T = 2π/ω
-  A = 0.1 # vibration amplitude m
   x₀ = 0.1 
   z₀ = -0.2 # point source position m
 
@@ -114,6 +113,7 @@ H0 = 2.5 #m #still-water depth
 T = 2*π./ω
 # η₀ = 0.25*ones(length(ω))
 α = randomPhase(ω; seed=100)
+A = 0.1 # vibration amplitude m
 
 
 # Peak Wave
