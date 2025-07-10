@@ -23,7 +23,22 @@ H0 = 10 #m #still-water depth
 @show mᵨ = 0.9 #mass per unit area of membrane / ρw
 @show Tᵨ = 0.1/4*g*Lm*Lm #T/ρw
 @show τ = 0.0#damping coeff
-diriFlag = true
+diriFlag = false
+
+# Oscillator parameters
+m_s = 0.1 # mass per unit area of oscillator 
+k_s = 0.4 # spring stiffness per unit area of oscillator 
+c_s = 0.1 # damping coefficient per unit area of oscillator
+m_sρ = m_s/ρw
+k_sρ = k_s/ρw
+c_sρ = c_s/ρw
+@show k_sρ  
+
+# Resonator properties
+rM = 1.0e3 #Kg
+rK = 5.9e3 #N/m
+println("Resonator Natural Frequency: ω1 = ", sqrt(rK/rM), "rad/s")
+println()
 
 # Wave parameters
 ω = 2.40#3.45#2.0#2.4
@@ -42,20 +57,9 @@ vzfsᵢₙ(x) = -im*ω*η₀*exp(im*k*x[1]) #???
 @show H0/λ
 println()
 
-# Oscillator parameters
-m_s = 0.1 # mass per unit area of oscillator 
-k_s = 0.4 # spring stiffness per unit area of oscillator 
-c_s = 0.1 # damping coefficient per unit area of oscillator
-m_sρ = m_s/ρw
-k_sρ = k_s/ρw
-c_sρ = c_s/ρw
-@show k_sρ  
-
 # Domain 
-# nx = 1650
-# ny = 20
 nx= 66
-ny=2
+ny= 2
 mesh_ry = 1.2 #Ratio for Geometric progression of eleSize
 Ld = 15*H0 #damping zone length
 LΩ = 18*H0 + Ld
@@ -63,7 +67,7 @@ x₀ = -Ld
 domain =  (x₀, x₀+LΩ, -H0, 0.0)
 partition = (nx, ny)
 xdᵢₙ = 0.0
-xdₒₜ = x₀ + LΩ - Ld
+# xdₒₜ = x₀ + LΩ - Ld
 xm₀ = xdᵢₙ + 8*H0
 xm₁ = xm₀ + Lm
 @show Lm
@@ -91,9 +95,9 @@ println()
 # Damping
 μ₀ = 2.5
 μ₁ᵢₙ(x) = μ₀*(1.0 - sin(π/2*(x[1]-x₀)/Ld))
-μ₁ₒᵤₜ(x) = μ₀*(1.0 - cos(π/2*(x[1]-xdₒₜ)/Ld))
+# μ₁ₒᵤₜ(x) = μ₀*(1.0 - cos(π/2*(x[1]-xdₒₜ)/Ld))
 μ₂ᵢₙ(x) = μ₁ᵢₙ(x)*k
-μ₂ₒᵤₜ(x) = μ₁ₒᵤₜ(x)*k
+# μ₂ₒᵤₜ(x) = μ₁ₒᵤₜ(x)*k
 ηd(x) = μ₂ᵢₙ(x)*ηᵢₙ(x)
 ∇ₙϕd(x) = μ₁ᵢₙ(x)*vzfsᵢₙ(x) #???
 
@@ -150,22 +154,22 @@ function is_damping1(xs) # Check if an element is inside the damping zone 1
   x = (1/n)*sum(xs)
   (x₀ <= x[1] <= xdᵢₙ ) * ( x[2] ≈ 0.0)
 end
-function is_damping2(xs) # Check if an element is inside the damping zone 2
-  n = length(xs)
-  x = (1/n)*sum(xs)
-  (xdₒₜ <= x[1] ) * ( x[2] ≈ 0.0)
-end
+# function is_damping2(xs) # Check if an element is inside the damping zone 2
+#   n = length(xs)
+#   x = (1/n)*sum(xs)
+#   (xdₒₜ <= x[1] ) * ( x[2] ≈ 0.0)
+# end
 
 # Masking and Beam Triangulation
 xΓ = get_cell_coordinates(Γ)
 Γm_to_Γ_mask = lazy_map(is_mem, xΓ)
 Γd1_to_Γ_mask = lazy_map(is_damping1, xΓ)
-Γd2_to_Γ_mask = lazy_map(is_damping2, xΓ)
+# Γd2_to_Γ_mask = lazy_map(is_damping2, xΓ)
 Γm = Triangulation(Γ, findall(Γm_to_Γ_mask))
 Γd1 = Triangulation(Γ, findall(Γd1_to_Γ_mask))
-Γd2 = Triangulation(Γ, findall(Γd2_to_Γ_mask))
+# Γd2 = Triangulation(Γ, findall(Γd2_to_Γ_mask))
 Γfs = Triangulation(Γ, findall(!, Γm_to_Γ_mask .| 
-  Γd1_to_Γ_mask  .| Γd2_to_Γ_mask))
+  Γd1_to_Γ_mask)) #  .| Γd2_to_Γ_mask))
 Γη = Triangulation(Γ, findall(Γm_to_Γ_mask))
 Γκ = Triangulation(Γ, findall(!,Γm_to_Γ_mask))
 
@@ -187,7 +191,7 @@ if vtk_output == true
   writevtk(Γ,filename*"_G")
   writevtk(Γm,filename*"_Gm")  
   writevtk(Γd1,filename*"_Gd1")
-  writevtk(Γd2,filename*"_Gd2")
+  # writevtk(Γd2,filename*"_Gd2")
   writevtk(Γfs,filename*"_Gfs")
   writevtk(Λmb,filename*"_Lmb")  
 end
@@ -198,7 +202,7 @@ degree = 2*order
 dΩ = Measure(Ω,degree)
 dΓm = Measure(Γm,degree)
 dΓd1 = Measure(Γd1,degree)
-dΓd2 = Measure(Γd2,degree)
+# dΓd2 = Measure(Γd2,degree)
 dΓfs = Measure(Γfs,degree)
 dΓin = Measure(Γin,degree)
 dΓot = Measure(Γot,degree)
@@ -234,22 +238,18 @@ else
   U_Γη = TrialFESpace(V_Γη)
 end
 
-# oscillator FESpace
-# reffe_const = ReferenceFE(lagrangian, Float64, 0)  # constant FE
-# V_q = TestFESpace(Γη, reffe_const, conformity=:L2,
-#   vector_type=Vector{ComplexF64})
-# U_q = TrialFESpace(V_q)
+V_Γq = ConstantFESpace(Ω, vector_type=Vector{ComplexF64}, 
+  field_type=VectorValue{1,ComplexF64})
+U_Γq = TrialFESpace(V_Γq)
+î1 = VectorValue(1.0)
 
-# reffe_const = ReferenceFE(lagrangian, VectorValue{2,Float64}, order)
-# V_q = TestFESpace(Γη, reffe_const, conformity=:L2)
-# U_q = TrialFESpace(V_q)
-
-V_q = ConstantFESpace(model; vector_type=Vector{ComplexF64}, field_type=VectorValue{1, ComplexF64})
-U_q = TrialFESpace(V_q) 
+# V_Γq = TestFESpace(Γη, reffe, conformity=:H1, 
+#     vector_type=Vector{ComplexF64})
+# U_Γq = TrialFESpace(V_Γq)   
 
 
-X = MultiFieldFESpace([U_Ω, U_Γκ, U_Γη, U_q]) 
-Y = MultiFieldFESpace([V_Ω, V_Γκ, V_Γη, V_q]) 
+X = MultiFieldFESpace([U_Ω, U_Γκ, U_Γη, U_Γq])
+Y = MultiFieldFESpace([V_Ω, V_Γκ, V_Γη, V_Γq]) 
 
 
 # Testing diracDelta
@@ -257,28 +257,31 @@ Y = MultiFieldFESpace([V_Ω, V_Γκ, V_Γη, V_q])
 # ffff_cf = CellField(ffff,Ω)
 # δ_p = DiracDelta(model, Point(90.0,0.0) )
 δΩ_p = DiracDelta(Ω, Point(110.0,0.0) )
-δ_p = DiracDelta(Γ, [Point(90.0,0.0), Point(85.0,0.0)] )
+δ_p = DiracDelta(Γ, [Point(90.0,0.0)] )
+# δ_p = DiracDelta(Γ, [Point(90.0,0.0), Point(85.0,0.0)] )
 # δ_p = DiracDelta(Γm, tags=["mem_bnd"])
 # @show δ_p = DiracDelta{0}(model,tags="mem_bnd")
 # @show δ_p = DiracDelta{0}(Ω,tags="mem_bnd")
 @show propertynames(δ_p)
 
+@show cnstFEArea = sum(∫(1)dΩ)
+
 # Weak form
 ∇ₙ(ϕ) = ∇(ϕ)⋅VectorValue(0.0,1.0)
 if(diriFlag)
   a((ϕ,κ,η,q),(w,u,v,ξ)) =      
-    ∫(  ∇(w)⋅∇(ϕ) )dΩ   +
+    ∫(  ∇(w)⋅∇(ϕ) )dΩ + # +
     ∫(  βₕ*(u + αₕ*w)*(g*κ - im*ω*ϕ) + im*ω*w*κ )dΓfs   +
     ∫(  βₕ*(u + αₕ*w)*(g*κ - im*ω*ϕ) + im*ω*w*κ 
       - μ₂ᵢₙ*κ*w + μ₁ᵢₙ*∇ₙ(ϕ)*(u + αₕ*w) )dΓd1    +
     ∫( -w * im * k * ϕ )dΓot +
-    ∫(  βₕ*(u + αₕ*w)*(g*κ - im*ω*ϕ) + im*ω*w*κ 
-      - μ₂ₒᵤₜ*κ*w + μ₁ₒᵤₜ*∇ₙ(ϕ)*(u + αₕ*w) )dΓd2    +
+    # ∫(  βₕ*(u + αₕ*w)*(g*κ - im*ω*ϕ) + im*ω*w*κ 
+    #   - μ₂ₒᵤₜ*κ*w + μ₁ₒᵤₜ*∇ₙ(ϕ)*(u + αₕ*w) )dΓd2    #+
     ∫(  v*(g*η - im*ω*ϕ) +  im*ω*w*η
-      - mᵨ*v*ω^2*η + Tᵨ*(1-im*ω*τ)*∇(v)⋅∇(η) )dΓm  + #membrane
-    ∫(- Tᵨ*(1-im*ω*τ)*v*∇(η)⋅nΛmb )dΛmb + #diri BC
-    ∫( (-im*ω*c_sρ + k_sρ)*(q - η)*v )dΓm + # oscillation coupling new term
-    ∫( (-m_s*ω^2 - im*ω*c_s + k_s)*q*ξ - (-im*ω*c_s + k_s)*η*ξ )dΓm # oscillation gov
+      - mᵨ*v*ω^2*η + Tᵨ*(1-im*ω*τ)*∇(v)⋅∇(η) )dΓm  +    # membrane
+    ∫(- Tᵨ*(1-im*ω*τ)*v*∇(η)⋅nΛmb )dΛmb +               # diri BC
+    δ_p((-im*ω*c_sρ + k_sρ)*((q⋅î1) - η)*v) +           # oscillation coupling new term
+    δ_p((-m_s*ω^2 - im*ω*c_s + k_s)*q*ξ - (-im*ω*c_s + k_s)*η*(ξ⋅î1)) # oscillation gov
     
 else
    a((ϕ,κ,η,q),(w,u,v,ξ)) =      
@@ -287,23 +290,24 @@ else
     ∫(  βₕ*(u + αₕ*w)*(g*κ - im*ω*ϕ) + im*ω*w*κ 
       - μ₂ᵢₙ*κ*w + μ₁ᵢₙ*∇ₙ(ϕ)*(u + αₕ*w) )dΓd1    +
     ∫( -w * im * k * ϕ )dΓot +
-    ∫(  βₕ*(u + αₕ*w)*(g*κ - im*ω*ϕ) + im*ω*w*κ 
-      - μ₂ₒᵤₜ*κ*w + μ₁ₒᵤₜ*∇ₙ(ϕ)*(u + αₕ*w) )dΓd2    +
+    # ∫(  βₕ*(u + αₕ*w)*(g*κ - im*ω*ϕ) + im*ω*w*κ 
+    #   - μ₂ₒᵤₜ*κ*w + μ₁ₒᵤₜ*∇ₙ(ϕ)*(u + αₕ*w) )dΓd2    +
     ∫(  v*(g*η - im*ω*ϕ) +  im*ω*w*η
-      - mᵨ*v*ω^2*η + Tᵨ*(1-im*ω*τ)*∇(v)⋅∇(η) )dΓm  + #membrane
-    # ∫(- Tᵨ*(1-im*ω*τ)*v*∇(η)⋅nΛmb )dΛmb + #diri BC
-    ∫( (-im*ω*c_sρ + k_sρ)*(q - η)*v )dΓm + # oscillation coupling new term
-    ∫( (-m_s*ω^2 - im*ω*c_s + k_s)*q*ξ - (-im*ω*c_s + k_s)*η*ξ )dΓm # oscillation gov
+      - mᵨ*v*ω^2*η + Tᵨ*(1-im*ω*τ)*∇(v)⋅∇(η) )dΓm   +    # membrane
+    # # ∫(- Tᵨ*(1-im*ω*τ)*v*∇(η)⋅nΛmb )dΛmb +            # diri BC
+    (-im*ω*c_sρ + k_sρ)*δ_p( v* ((q⋅î1) - η) ) +         # oscillation coupling new term
+    ∫(( -m_s*ω^2 - im*ω*c_s + k_s)*(ξ⋅q))dΩ -(-im*ω*c_sρ + k_sρ)*δ_p((ξ⋅î1)*η) # oscillation gov
 end
 
-l((w,u,v,ξ)) =  ∫( w*vxᵢₙ )dΓin - ∫( ηd*w - ∇ₙϕd*(u + αₕ*w) )dΓd1
-               #-5*δ_p(v) # + 1*δΩ_p(w)*ω*ω
-
+l((w,u,v,ξ)) =  ∫( w*vxᵢₙ )dΓin - ∫( ηd*w - ∇ₙϕd*(u + αₕ*w) )dΓd1 #+
+                # ∫( 100/cnstFEArea*im* (ξ⋅î1) )dΩ
 
 # Solution
 op = AffineFEOperator(a,l,X,Y)
 (ϕₕ,κₕ,ηₕ,qₕ) = solve(op)
 xΓκ = get_cell_coordinates(Γκ)
+
+@show qₕ(Point(90.0,0.0))
 
 # Generating input waves on FS
 xΓη = get_cell_coordinates(Γη)
@@ -321,8 +325,6 @@ sort!(prxΓκ)
   FESpace(Γκ, reffe, conformity=:H1, vector_type=Vector{ComplexF64}))
 
 κr = κₕ - κin
-# qₕ = getindex(q_vecₕ, 1) + im * getindex(q_vecₕ, 2) #trial
-qₕ_c = map(x -> x[1], qₕ)
 
 if vtk_output == true
   writevtk(Ω,filename * "_O_sol.vtu",
@@ -337,8 +339,9 @@ if vtk_output == true
   writevtk(Γη,filename * "_Ge_sol.vtu",
     cellfields = ["eta_re" => real(ηₕ),"eta_im" => imag(ηₕ),
     "eta_abs" => abs(ηₕ), "eta_ang" => angle∘(ηₕ)])
-  writevtk(Γη, filename * "_Gq_sol.vtu",
-    cellfields = ["q_abs" => abs(qₕ_c), "q_re" => real(qₕ_c), "q_im" => imag(qₕ_c)])
+  writevtk(Ω,filename * "_R_sol.vtu",
+    cellfields = ["q_re" => real(qₕ⋅î1),"q_im" => imag(qₕ⋅î1),
+    "q_abs" => abs(qₕ⋅î1), "q_ang" => angle∘(qₕ⋅î1)])
 end
 
 # Energy flux (Power) calculation

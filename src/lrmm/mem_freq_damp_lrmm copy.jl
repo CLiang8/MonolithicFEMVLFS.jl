@@ -58,8 +58,8 @@ println()
 
 
 # Domain 
-nx = 1650
-ny = 20
+nx = 66
+ny = 2
 mesh_ry = 1.2 #Ratio for Geometric progression of eleSize
 Ld = 15*H0 #damping zone length
 LΩ = 18*H0 + Ld
@@ -67,7 +67,7 @@ x₀ = -Ld
 domain =  (x₀, x₀+LΩ, -H0, 0.0)
 partition = (nx, ny)
 xdᵢₙ = 0.0
-# xdₒₜ = x₀ + LΩ - Ld
+xdₒₜ = x₀ + LΩ - Ld
 xm₀ = xdᵢₙ + 8*H0
 xm₁ = xm₀ + Lm
 @show Lm
@@ -95,9 +95,9 @@ println()
 # Damping
 μ₀ = 2.5
 μ₁ᵢₙ(x) = μ₀*(1.0 - sin(π/2*(x[1]-x₀)/Ld))
-# μ₁ₒᵤₜ(x) = μ₀*(1.0 - cos(π/2*(x[1]-xdₒₜ)/Ld))
+μ₁ₒᵤₜ(x) = μ₀*(1.0 - cos(π/2*(x[1]-xdₒₜ)/Ld))
 μ₂ᵢₙ(x) = μ₁ᵢₙ(x)*k
-# μ₂ₒᵤₜ(x) = μ₁ₒᵤₜ(x)*k
+μ₂ₒᵤₜ(x) = μ₁ₒᵤₜ(x)*k
 ηd(x) = μ₂ᵢₙ(x)*ηᵢₙ(x)
 ∇ₙϕd(x) = μ₁ᵢₙ(x)*vzfsᵢₙ(x) #???
 
@@ -154,22 +154,22 @@ function is_damping1(xs) # Check if an element is inside the damping zone 1
   x = (1/n)*sum(xs)
   (x₀ <= x[1] <= xdᵢₙ ) * ( x[2] ≈ 0.0)
 end
-# function is_damping2(xs) # Check if an element is inside the damping zone 2
-#   n = length(xs)
-#   x = (1/n)*sum(xs)
-#   (xdₒₜ <= x[1] ) * ( x[2] ≈ 0.0)
-# end
+function is_damping2(xs) # Check if an element is inside the damping zone 2
+  n = length(xs)
+  x = (1/n)*sum(xs)
+  (xdₒₜ <= x[1] ) * ( x[2] ≈ 0.0)
+end
 
 # Masking and Beam Triangulation
 xΓ = get_cell_coordinates(Γ)
 Γm_to_Γ_mask = lazy_map(is_mem, xΓ)
 Γd1_to_Γ_mask = lazy_map(is_damping1, xΓ)
-# Γd2_to_Γ_mask = lazy_map(is_damping2, xΓ)
+Γd2_to_Γ_mask = lazy_map(is_damping2, xΓ)
 Γm = Triangulation(Γ, findall(Γm_to_Γ_mask))
 Γd1 = Triangulation(Γ, findall(Γd1_to_Γ_mask))
-# Γd2 = Triangulation(Γ, findall(Γd2_to_Γ_mask))
+Γd2 = Triangulation(Γ, findall(Γd2_to_Γ_mask))
 Γfs = Triangulation(Γ, findall(!, Γm_to_Γ_mask .| 
-  Γd1_to_Γ_mask)) # .| Γd2_to_Γ_mask))
+  Γd1_to_Γ_mask .| Γd2_to_Γ_mask))
 Γη = Triangulation(Γ, findall(Γm_to_Γ_mask))
 Γκ = Triangulation(Γ, findall(!,Γm_to_Γ_mask))
 
@@ -191,7 +191,7 @@ if vtk_output == true
   writevtk(Γ,filename*"_G")
   writevtk(Γm,filename*"_Gm")  
   writevtk(Γd1,filename*"_Gd1")
-  # writevtk(Γd2,filename*"_Gd2")
+  writevtk(Γd2,filename*"_Gd2")
   writevtk(Γfs,filename*"_Gfs")
   writevtk(Λmb,filename*"_Lmb")  
 end
@@ -202,7 +202,7 @@ degree = 2*order
 dΩ = Measure(Ω,degree)
 dΓm = Measure(Γm,degree)
 dΓd1 = Measure(Γd1,degree)
-# dΓd2 = Measure(Γd2,degree)
+dΓd2 = Measure(Γd2,degree)
 dΓfs = Measure(Γfs,degree)
 dΓin = Measure(Γin,degree)
 dΓot = Measure(Γot,degree)
@@ -267,16 +267,19 @@ Y = MultiFieldFESpace([V_Ω, V_Γκ, V_Γη, V_Γq])
 # Weak form
 ∇ₙ(ϕ) = ∇(ϕ)⋅VectorValue(0.0,1.0)
 if(diriFlag)
-  a((ϕ,κ,η),(w,u,v)) =      
+  a((ϕ,κ,η,q),(w,u,v,ξ)) =      
     ∫(  ∇(w)⋅∇(ϕ) )dΩ   +
     ∫(  βₕ*(u + αₕ*w)*(g*κ - im*ω*ϕ) + im*ω*w*κ )dΓfs   +
     ∫(  βₕ*(u + αₕ*w)*(g*κ - im*ω*ϕ) + im*ω*w*κ 
       - μ₂ᵢₙ*κ*w + μ₁ᵢₙ*∇ₙ(ϕ)*(u + αₕ*w) )dΓd1    +
     ∫( -w * im * k * ϕ )dΓot +
-    # ∫(  βₕ*(u + αₕ*w)*(g*κ - im*ω*ϕ) + im*ω*w*κ 
-      # - μ₂ₒᵤₜ*κ*w + μ₁ₒᵤₜ*∇ₙ(ϕ)*(u + αₕ*w) )dΓd2    +
+    ∫(  βₕ*(u + αₕ*w)*(g*κ - im*ω*ϕ) + im*ω*w*κ 
+      - μ₂ₒᵤₜ*κ*w + μ₁ₒᵤₜ*∇ₙ(ϕ)*(u + αₕ*w) )dΓd2    +
     ∫(  v*(g*η - im*ω*ϕ) +  im*ω*w*η
-      - mᵨ*v*ω^2*η + Tᵨ*(1-im*ω*τ)*∇(v)⋅∇(η) )dΓm  + 
+      - mᵨ*v*ω^2*η + Tᵨ*(1-im*ω*τ)*∇(v)⋅∇(η) )dΓm  +     # membrane
+    (-im*ω*c_sρ + k_sρ)*δ_p( v*( (q⋅î1) - η ) ) +        # oscillator coupling new term
+    ∫(( -m_s*ω^2 - im*ω*c_s + k_s)*(ξ⋅q))dΩ +            
+    - (-im*ω*c_sρ + k_sρ)*δ_p((ξ⋅î1)*η) +                # oscillation gov              
     ∫(- Tᵨ*(1-im*ω*τ)*v*∇(η)⋅nΛmb )dΛmb #diri
 
 else
@@ -286,13 +289,13 @@ else
     ∫(  βₕ*(u + αₕ*w)*(g*κ - im*ω*ϕ) + im*ω*w*κ 
       - μ₂ᵢₙ*κ*w + μ₁ᵢₙ*∇ₙ(ϕ)*(u + αₕ*w) )dΓd1    +
     ∫( -w * im * k * ϕ )dΓot +
-    # ∫(  βₕ*(u + αₕ*w)*(g*κ - im*ω*ϕ) + im*ω*w*κ 
-    #   - μ₂ₒᵤₜ*κ*w + μ₁ₒᵤₜ*∇ₙ(ϕ)*(u + αₕ*w) )dΓd2    +
+    ∫(  βₕ*(u + αₕ*w)*(g*κ - im*ω*ϕ) + im*ω*w*κ 
+      - μ₂ₒᵤₜ*κ*w + μ₁ₒᵤₜ*∇ₙ(ϕ)*(u + αₕ*w) )dΓd2    +
     ∫(  v*(g*η - im*ω*ϕ) +  im*ω*w*η
-      - mᵨ*v*ω^2*η + Tᵨ*(1-im*ω*τ)*∇(v)⋅∇(η) )dΓm  +    
-    -rK/ρw*δ_p( v*( (q⋅î1) - η ) ) +
-    ∫( -rM/cnstFEArea*ω^2*(q⋅ξ) + rK/cnstFEArea*(ξ⋅q) )dΩ +   # ????
-    (-im*ω*c_sρ + k_sρ)*δ_p((ξ⋅î1)*η) #+
+      - mᵨ*v*ω^2*η + Tᵨ*(1-im*ω*τ)*∇(v)⋅∇(η) )dΓm  +     # membrane
+    (-im*ω*c_sρ + k_sρ)*δ_p( v*( (q⋅î1) - η ) ) +        # oscillator coupling new term
+    ∫(( -m_s*ω^2 - im*ω*c_s + k_s)*(ξ⋅q))dΩ +  
+    - (-im*ω*c_sρ + k_sρ)*δ_p((ξ⋅î1)*η) #+               # oscillation gov
     # (-rM*ω^2*(q⋅ξ) + rK*(ξ⋅q))+   # ????
     # (-im*ω*c_sρ + k_sρ)*δ_p((ξ⋅î1)*η)
     #∫(- Tᵨ*(1-im*ω*τ)*v*∇(η)⋅nΛmb )dΛmb #diri
