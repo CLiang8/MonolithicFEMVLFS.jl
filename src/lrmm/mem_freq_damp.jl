@@ -2,14 +2,13 @@ module BeamMultJoints_freq
 
 using Revise
 using Gridap
-using Gridap.CellData
 using Plots
 using DrWatson
 using WaveSpec
 using .Constants
 
 
-name::String = "data/sims_202507/mono_freq_free"
+name::String = "data/sims_202506/run/mono_freq_free"
 order::Int = 2
 vtk_output::Bool = true
 filename = name*"/mem"
@@ -24,20 +23,6 @@ H0 = 10 #m #still-water depth
 @show Tᵨ = 0.1/4*g*Lm*Lm #T/ρw
 @show τ = 0.0#damping coeff
 diriFlag = false
-
-# Resonator properties
-rM = 1.0e3 #Kg
-rK = 5.9e3 #N/m
-println("Resonator Natural Frequency: ω1 = ", sqrt(rK/rM), "rad/s")
-println()
-
-m_s = 0.25 # mass per unit area of oscillator 
-k_s = 1.50 # spring stiffness per unit area of oscillator 
-c_s = 0.1 # damping coefficient per unit area of oscillator
-m_sρ = m_s/ρw
-k_sρ = k_s/ρw
-c_sρ = c_s/ρw
-@show k_sρ  
 
 # Wave parameters
 ω = 2.40#3.45#2.0#2.4
@@ -169,7 +154,7 @@ xΓ = get_cell_coordinates(Γ)
 Γd1 = Triangulation(Γ, findall(Γd1_to_Γ_mask))
 # Γd2 = Triangulation(Γ, findall(Γd2_to_Γ_mask))
 Γfs = Triangulation(Γ, findall(!, Γm_to_Γ_mask .| 
-  Γd1_to_Γ_mask)) # .| Γd2_to_Γ_mask))
+  Γd1_to_Γ_mask ))# .| Γd2_to_Γ_mask))
 Γη = Triangulation(Γ, findall(Γm_to_Γ_mask))
 Γκ = Triangulation(Γ, findall(!,Γm_to_Γ_mask))
 
@@ -237,32 +222,9 @@ if(diriFlag)
 else
   U_Γη = TrialFESpace(V_Γη)
 end
+X = MultiFieldFESpace([U_Ω,U_Γκ,U_Γη])
+Y = MultiFieldFESpace([V_Ω,V_Γκ,V_Γη])
 
-V_Γq = ConstantFESpace(Ω, vector_type=Vector{ComplexF64}, 
-  field_type=VectorValue{1,ComplexF64})
-U_Γq = TrialFESpace(V_Γq)
-î1 = VectorValue(1.0)
-
-# V_Γq = TestFESpace(Γη, reffe, conformity=:H1, 
-#     vector_type=Vector{ComplexF64})
-# U_Γq = TrialFESpace(V_Γq)
-
-X = MultiFieldFESpace([U_Ω, U_Γκ, U_Γη, U_Γq])
-Y = MultiFieldFESpace([V_Ω, V_Γκ, V_Γη, V_Γq])
-
-
-# Testing diracDelta
-# ffff(x) = -1
-# ffff_cf = CellField(ffff,Ω)
-# δ_p = DiracDelta(model, Point(90.0,0.0) )
-δΩ_p = DiracDelta(Ω, Point(110.0,0.0) )
-δ_p = DiracDelta(Γ, [Point(90.0,0.0)] )
-# δ_p = DiracDelta(Γm, tags=["mem_bnd"])
-# @show δ_p = DiracDelta{0}(model,tags="mem_bnd")
-# @show δ_p = DiracDelta{0}(Ω,tags="mem_bnd")
-@show propertynames(δ_p)
-
-@show cnstFEArea = sum(∫(1)dΩ)
 
 # Weak form
 ∇ₙ(ϕ) = ∇(ϕ)⋅VectorValue(0.0,1.0)
@@ -280,7 +242,7 @@ if(diriFlag)
     ∫(- Tᵨ*(1-im*ω*τ)*v*∇(η)⋅nΛmb )dΛmb #diri
 
 else
-  a((ϕ,κ,η,q),(w,u,v,ξ)) =      
+  a((ϕ,κ,η),(w,u,v)) =      
     ∫(  ∇(w)⋅∇(ϕ) )dΩ   +
     ∫(  βₕ*(u + αₕ*w)*(g*κ - im*ω*ϕ) + im*ω*w*κ )dΓfs   +
     ∫(  βₕ*(u + αₕ*w)*(g*κ - im*ω*ϕ) + im*ω*w*κ 
@@ -289,26 +251,17 @@ else
     # ∫(  βₕ*(u + αₕ*w)*(g*κ - im*ω*ϕ) + im*ω*w*κ 
     #   - μ₂ₒᵤₜ*κ*w + μ₁ₒᵤₜ*∇ₙ(ϕ)*(u + αₕ*w) )dΓd2    +
     ∫(  v*(g*η - im*ω*ϕ) +  im*ω*w*η
-      - mᵨ*v*ω^2*η + Tᵨ*(1-im*ω*τ)*∇(v)⋅∇(η) )dΓm  +    
+      - mᵨ*v*ω^2*η + Tᵨ*(1-im*ω*τ)*∇(v)⋅∇(η) )dΓm  #+ 
     #∫(- Tᵨ*(1-im*ω*τ)*v*∇(η)⋅nΛmb )dΛmb #diri
-    -rK/ρw*δ_p( v*( (q⋅î1) - η ) ) +    
-    ∫( (ξ⋅q)* 0.0 )dΩ + 
-    # ∫( -rM/cnstFEArea*ω^2*(q⋅ξ) + rK/cnstFEArea*(ξ⋅q) )dΩ +
-    -rM*ω^2*δ_p(q⋅ξ) +
-    +rK*δ_p(q⋅ξ - (ξ⋅î1)*η)    
 end
 
-l((w,u,v,ξ)) =  ∫( w*vxᵢₙ )dΓin - ∫( ηd*w - ∇ₙϕd*(u + αₕ*w) )dΓd1 #+
-                # ∫( 100/cnstFEArea*im* (ξ⋅î1) )dΩ
-
+l((w,u,v)) =  ∫( w*vxᵢₙ )dΓin - ∫( ηd*w - ∇ₙϕd*(u + αₕ*w) )dΓd1
 
 
 # Solution
 op = AffineFEOperator(a,l,X,Y)
-(ϕₕ,κₕ,ηₕ,qₕ) = solve(op)
+(ϕₕ,κₕ,ηₕ) = solve(op)
 xΓκ = get_cell_coordinates(Γκ)
-
-@show qₕ(Point(90.0,0.0))
 
 # Generating input waves on FS
 xΓη = get_cell_coordinates(Γη)
@@ -331,18 +284,12 @@ if vtk_output == true
   writevtk(Ω,filename * "_O_sol.vtu",
     cellfields = ["phi_re" => real(ϕₕ),"phi_im" => imag(ϕₕ),
     "phi_abs" => abs(ϕₕ), "phi_ang" => angle∘(ϕₕ)])
-
-  writevtk(Ω,filename * "_R_sol.vtu",
-    cellfields = ["q_re" => real(qₕ⋅î1),"q_im" => imag(qₕ⋅î1),
-    "q_abs" => abs(qₕ⋅î1), "q_ang" => angle∘(qₕ⋅î1)])
-
   writevtk(Γκ,filename * "_Gk_sol.vtu",
     cellfields = ["eta_re" => real(κₕ),"eta_im" => imag(κₕ),
     "eta_abs" => abs(κₕ), "eta_ang" => angle∘(κₕ),
     "etaR_re" => real(κr),"etaR_im" => imag(κr),
     "etaR_abs" => abs(κr), "etaR_ang" => angle∘(κr),
     "ηin_abs" => abs(κin), "ηin_ang" => angle∘(κin)])
-
   writevtk(Γη,filename * "_Ge_sol.vtu",
     cellfields = ["eta_re" => real(ηₕ),"eta_im" => imag(ηₕ),
     "eta_abs" => abs(ηₕ), "eta_ang" => angle∘(ηₕ)])
