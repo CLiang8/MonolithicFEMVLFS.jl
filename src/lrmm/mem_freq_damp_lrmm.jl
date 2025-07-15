@@ -28,7 +28,10 @@ diriFlag = false
 # Resonator properties
 rM = 1.0e3 #Kg
 rK = 5.9e3 #N/m
+ζ = 0.05 #damping ratio
+rC = 2*ζ*sqrt(rK*rM) #N*s/m
 println("Resonator Natural Frequency: ω1 = ", sqrt(rK/rM), "rad/s")
+println("Damping coefficient: rC = ", rC, "N*s/m")
 println()
 
 m_s = 0.25 # mass per unit area of oscillator 
@@ -40,7 +43,7 @@ c_sρ = c_s/ρw
 @show k_sρ  
 
 # Wave parameters
-ω = 2.40#3.45#2.0#2.4
+ω = 2.0#3.45#2.40
 η₀ = 0.10
 k = dispersionRelAng(H0, ω)
 λ = 2*π/k
@@ -352,6 +355,9 @@ end
 ηx = ∇(ηₕ)⋅VectorValue(1.0,0.0)
 Pd = sum(∫( abs(ηx)*abs(ηx) )dΓm)
 Pd = 0.5*Tᵨ*ρw*τ*ω*ω*Pd
+q_abs = abs(qₕ ⋅ î1)
+Pd_r = 0.5*rC*ω*ω*q_abs*q_abs # resonator damping
+Pd_total = Pd + Pd_r
 
 # Wave energy flux
 ηrf = abs(κr(Point(60.0,0.0)))
@@ -365,8 +371,8 @@ Ptr = (0.5*ρw*g*ηtr*ηtr)*(ω/k)*wave_n
 println("Power In \t ",Pin," W/m")
 println("Power Ref \t ",Prf," W/m")
 println("Power Trans \t ",Ptr," W/m")
-println("Power Abs \t ",Pd," W/m")
-println("Error \t ",Pin - Prf - Ptr - Pd," W/m")
+println("Power Abs \t ",Pd_total," W/m")
+println("Error \t ",Pin - Prf - Ptr - Pd_total," W/m")
 
 
 data = Dict("ϕₕ" => ϕₕ,

@@ -294,7 +294,7 @@ else
     #   - μ₂ₒᵤₜ*κ*w + μ₁ₒᵤₜ*∇ₙ(ϕ)*(u + αₕ*w) )dΓd2    +
     ∫(  v*(g*η - im*ω*ϕ) +  im*ω*w*η
       - mᵨ*v*ω^2*η + Tᵨ*(1-im*ω*τ)*∇(v)⋅∇(η) )dΓm   +    # membrane
-    # # ∫(- Tᵨ*(1-im*ω*τ)*v*∇(η)⋅nΛmb )dΛmb +            # diri BC
+    #  ∫(- Tᵨ*(1-im*ω*τ)*v*∇(η)⋅nΛmb )dΛmb +            # diri BC
     (-im*ω*c_sρ + k_sρ)*δ_p( v* ((q⋅î1) - η) ) +         # oscillation coupling new term
     ∫(( -m_s*ω^2 - im*ω*c_s + k_s)*(ξ⋅q))dΩ -(-im*ω*c_sρ + k_sρ)*δ_p((ξ⋅î1)*η) # oscillation gov
 end

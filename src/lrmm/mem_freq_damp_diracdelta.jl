@@ -9,7 +9,7 @@ using WaveSpec
 using .Constants
 
 
-name::String = "data/sims_mem_freq_og/run/mono_freq_free"
+name::String = "data/sims_mem_freq_og/run/mono_freq_free_pgwave"
 order::Int = 2
 vtk_output::Bool = true
 filename = name*"/mem"
