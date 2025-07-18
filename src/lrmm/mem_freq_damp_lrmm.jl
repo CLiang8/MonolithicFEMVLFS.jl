@@ -28,7 +28,7 @@ diriFlag = false
 # Resonator properties
 rM = 1.0e3 #Kg
 rK = 5.9e3 #N/m
-ζ = 0.05 #damping ratio
+ζ = 0 # 0.05 #damping ratio
 rC = 2*ζ*sqrt(rK*rM) #N*s/m
 println("Resonator Natural Frequency: ω1 = ", sqrt(rK/rM), "rad/s")
 println("Damping coefficient: rC = ", rC, "N*s/m")
@@ -43,7 +43,7 @@ c_sρ = c_s/ρw
 @show k_sρ  
 
 # Wave parameters
-ω = 2.0#3.45#2.40
+ω = 2.0 #3.45#2.4
 η₀ = 0.10
 k = dispersionRelAng(H0, ω)
 λ = 2*π/k
@@ -294,12 +294,14 @@ else
     ∫(  v*(g*η - im*ω*ϕ) +  im*ω*w*η
       - mᵨ*v*ω^2*η + Tᵨ*(1-im*ω*τ)*∇(v)⋅∇(η) )dΓm  +    
     #∫(- Tᵨ*(1-im*ω*τ)*v*∇(η)⋅nΛmb )dΛmb #diri
-    -rK/ρw*δ_p( v*( (q⋅î1) - η ) ) +    
-    ∫( (ξ⋅q)* 0.0 )dΩ + 
+    (-im*ω*rC + rK)/ρw*δ_p( v*( (q⋅î1) - η ) ) +  #new coupling term  
+    #  +rK/ρw*δ_p( v*( (q⋅î1) - η ) ) +
+     ∫( (ξ⋅q)* 0.0 )dΩ  + 
     # ∫( -rM/cnstFEArea*ω^2*(q⋅ξ) + rK/cnstFEArea*(ξ⋅q) )dΩ +
-    -rM*ω^2*δ_p(q⋅ξ) +
-    +rK*δ_p(q⋅ξ - (ξ⋅î1)*η)    
-end
+     -rM/ρw*ω^2*δ_p(q⋅ξ)  + 
+    (-im*ω*rC + rK)/ρw*δ_p(q⋅ξ - (ξ⋅î1)*η)    
+    #  +rK*δ_p(q⋅ξ - (ξ⋅î1)*η) 
+end 
 
 l((w,u,v,ξ)) =  ∫( w*vxᵢₙ )dΓin - ∫( ηd*w - ∇ₙϕd*(u + αₕ*w) )dΓd1 #+
                 # ∫( 100/cnstFEArea*im* (ξ⋅î1) )dΩ
@@ -351,13 +353,19 @@ if vtk_output == true
     "eta_abs" => abs(ηₕ), "eta_ang" => angle∘(ηₕ)])
 end
 
+# #test
+# println(typeof(qₕ))
+# println(typeof(qₕ⋅î1))
+
 # Energy flux (Power) calculation
 ηx = ∇(ηₕ)⋅VectorValue(1.0,0.0)
 Pd = sum(∫( abs(ηx)*abs(ηx) )dΓm)
 Pd = 0.5*Tᵨ*ρw*τ*ω*ω*Pd
-q_abs = abs(qₕ ⋅ î1)
+q_abs = abs(qₕ(Point(90.0,0.0))⋅î1)
 Pd_r = 0.5*rC*ω*ω*q_abs*q_abs # resonator damping
 Pd_total = Pd + Pd_r
+@show q_abs
+@show Pd_r
 
 # Wave energy flux
 ηrf = abs(κr(Point(60.0,0.0)))
