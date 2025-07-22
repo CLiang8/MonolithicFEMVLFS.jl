@@ -7,12 +7,14 @@ using Plots
 using DrWatson
 using WaveSpec
 using .Constants
+using TickTock
 
 
-name::String = "data/sims_202507/mono_freq_free"
+name::String = "data/sims_202507/mono_freq_lrmm_damp"
 order::Int = 2
 vtk_output::Bool = true
 filename = name*"/mem"
+tick()
 
 ρw = 1025 #kg/m3 water
 H0 = 10 #m #still-water depth
@@ -34,16 +36,13 @@ println("Resonator Natural Frequency: ω1 = ", sqrt(rK/rM), "rad/s")
 println("Damping coefficient: rC = ", rC, "N*s/m")
 println()
 
-m_s = 0.25 # mass per unit area of oscillator 
-k_s = 1.50 # spring stiffness per unit area of oscillator 
-c_s = 0.1 # damping coefficient per unit area of oscillator
-m_sρ = m_s/ρw
-k_sρ = k_s/ρw
-c_sρ = c_s/ρw
-@show k_sρ  
+# m_s = 0.25 # mass per unit area of oscillator 
+# k_s = 1.50 # spring stiffness per unit area of oscillator 
+# c_s = 0.1 # damping coefficient per unit area of oscillator
+# @show k_sρ  
 
 # Wave parameters
-ω = 2.0 #3.45#2.4
+ω = 1.5 #3.45#2.4
 η₀ = 0.10
 k = dispersionRelAng(H0, ω)
 λ = 2*π/k
@@ -61,10 +60,10 @@ println()
 
 
 # Domain 
-nx = 1650
+nx = 3120
 ny = 20
 mesh_ry = 1.2 #Ratio for Geometric progression of eleSize
-Ld = 15*H0 #damping zone length
+Ld = 60*H0 #damping zone length
 LΩ = 18*H0 + Ld
 x₀ = -Ld
 domain =  (x₀, x₀+LΩ, -H0, 0.0)
@@ -294,7 +293,7 @@ else
     ∫(  v*(g*η - im*ω*ϕ) +  im*ω*w*η
       - mᵨ*v*ω^2*η + Tᵨ*(1-im*ω*τ)*∇(v)⋅∇(η) )dΓm  +    
     #∫(- Tᵨ*(1-im*ω*τ)*v*∇(η)⋅nΛmb )dΛmb #diri
-    (-im*ω*rC + rK)/ρw*δ_p( v*( (q⋅î1) - η ) ) +  #new coupling term  
+    (+im*ω*rC - rK)/ρw*δ_p( v*( (q⋅î1) - η ) ) +  #new coupling term  
     #  +rK/ρw*δ_p( v*( (q⋅î1) - η ) ) +
      ∫( (ξ⋅q)* 0.0 )dΩ  + 
     # ∫( -rM/cnstFEArea*ω^2*(q⋅ξ) + rK/cnstFEArea*(ξ⋅q) )dΩ +
@@ -362,9 +361,11 @@ end
 Pd = sum(∫( abs(ηx)*abs(ηx) )dΓm)
 Pd = 0.5*Tᵨ*ρw*τ*ω*ω*Pd
 q_abs = abs(qₕ(Point(90.0,0.0))⋅î1)
-Pd_r = 0.5*rC*ω*ω*q_abs*q_abs # resonator damping
+ηr_abs = abs(ηₕ(Point(90.0,0.0)))
+Pd_r = 0.5*rC*ω*ω*(q_abs - ηr_abs)^2 # resonator damping
 Pd_total = Pd + Pd_r
 @show q_abs
+@show ηr_abs
 @show Pd_r
 
 # Wave energy flux
@@ -382,6 +383,7 @@ println("Power Trans \t ",Ptr," W/m")
 println("Power Abs \t ",Pd_total," W/m")
 println("Error \t ",Pin - Prf - Ptr - Pd_total," W/m")
 
+tock()
 
 data = Dict("ϕₕ" => ϕₕ,
             "κₕ" => κₕ,
