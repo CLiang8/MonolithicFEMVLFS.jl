@@ -34,16 +34,8 @@ println("Resonator Natural Frequency: ω1 = ", sqrt(rK/rM), "rad/s")
 println("Damping coefficient: rC = ", rC, "N*s/m")
 println()
 
-m_s = 0.25 # mass per unit area of oscillator 
-k_s = 1.50 # spring stiffness per unit area of oscillator 
-c_s = 0.1 # damping coefficient per unit area of oscillator
-m_sρ = m_s/ρw
-k_sρ = k_s/ρw
-c_sρ = c_s/ρw
-@show k_sρ  
-
 # Wave parameters
-ω = 2.0 #3.45#2.40
+ω = 2.40 #3.45#2.40
 η₀ = 0.10
 k = dispersionRelAng(H0, ω)
 λ = 2*π/k
@@ -103,7 +95,6 @@ println()
 # μ₂ₒᵤₜ(x) = μ₁ₒᵤₜ(x)*k
 ηd(x) = μ₂ᵢₙ(x)*ηᵢₙ(x)
 ∇ₙϕd(x) = μ₁ᵢₙ(x)*vzfsᵢₙ(x) #???
-
 
 
 # Mesh
@@ -219,6 +210,22 @@ dΛmb = Measure(Λmb,degree)
 # Dirichlet Fnc
 gη(x) = ComplexF64(0.0)
 
+
+# Testing diracDelta
+# ffff(x) = -1
+# ffff_cf = CellField(ffff,Ω)
+# δ_p = DiracDelta(model, Point(90.0,0.0) )
+pts = [Point(90.0, 0.0),
+       Point(95.0, 0.0)]
+# pts = [Point(90.0, 0.0)]
+δ_p = DiracDelta(Γ, pts)
+δΩ_p = DiracDelta(Ω, Point(110.0,0.0) )
+# δ_p = DiracDelta(Γm, tags=["mem_bnd"])
+# @show δ_p = DiracDelta{0}(model,tags="mem_bnd")
+# @show δ_p = DiracDelta{0}(Ω,tags="mem_bnd")
+@show propertynames(δ_p)
+
+
 # FE spaces
 reffe = ReferenceFE(lagrangian,Float64,order)
 V_Ω = TestFESpace(Ω, reffe, conformity=:H1, 
@@ -241,8 +248,21 @@ else
   U_Γη = TrialFESpace(V_Γη)
 end
 
-V_Γq = ConstantFESpace(Ω, vector_type=Vector{ComplexF64}, 
-  field_type=VectorValue{1,ComplexF64})
+# Construct discrete FE space for resonator
+cells = collect(0:(length(pts)-1))'
+cell_vertices = reshape(1:length(pts), 1, :)
+coordinates = hcat(pts...)
+using Gridap.Geometry: CellType 
+topo = (cell_vertices=cell_vertices, cell_types=fill(CellType(:Point), length(pts)))
+q_model = UnstructuredDiscreteModel(
+    (dim = 2, # 2D
+     coords = coordinates,
+     connect = cell_vertices)
+)
+reffe_q = ReferenceFE(lagrangian, Float64, 0)  # piecewise constant
+V_Γq = TestFESpace(q_model, reffe_q, conformity=:L2, vector_type=Vector{ComplexF64})
+# V_Γq = ConstantFESpace(Ω, vector_type=Vector{ComplexF64}, 
+#   field_type=VectorValue{1,ComplexF64})
 U_Γq = TrialFESpace(V_Γq)
 î1 = VectorValue(1.0)
 
@@ -253,17 +273,6 @@ î1 = VectorValue(1.0)
 X = MultiFieldFESpace([U_Ω, U_Γκ, U_Γη, U_Γq])
 Y = MultiFieldFESpace([V_Ω, V_Γκ, V_Γη, V_Γq])
 
-
-# Testing diracDelta
-# ffff(x) = -1
-# ffff_cf = CellField(ffff,Ω)
-# δ_p = DiracDelta(model, Point(90.0,0.0) )
-δΩ_p = DiracDelta(Ω, Point(110.0,0.0) )
-δ_p = DiracDelta(Γ, [Point(90.0,0.0)] )
-# δ_p = DiracDelta(Γm, tags=["mem_bnd"])
-# @show δ_p = DiracDelta{0}(model,tags="mem_bnd")
-# @show δ_p = DiracDelta{0}(Ω,tags="mem_bnd")
-@show propertynames(δ_p)
 
 @show cnstFEArea = sum(∫(1)dΩ)
 
@@ -294,13 +303,13 @@ else
     ∫(  v*(g*η - im*ω*ϕ) +  im*ω*w*η
       - mᵨ*v*ω^2*η + Tᵨ*(1-im*ω*τ)*∇(v)⋅∇(η) )dΓm  +    
     #∫(- Tᵨ*(1-im*ω*τ)*v*∇(η)⋅nΛmb )dΛmb #diri
-    (-im*ω*rC + rK)/ρw*δ_p( v*( (q⋅î1) - η ) ) +  #new coupling term  
-     +rK/ρw*δ_p( v*( (q⋅î1) - η ) ) +
+    (+im*ω*rC - rK)/ρw*δ_p( v*( (q⋅î1) - η ) ) +  #new coupling term  
+    #  +rK/ρw*δ_p( v*( (q⋅î1) - η ) ) +
      ∫( (ξ⋅q)* 0.0 )dΩ  + 
     # ∫( -rM/cnstFEArea*ω^2*(q⋅ξ) + rK/cnstFEArea*(ξ⋅q) )dΩ +
      -rM/ρw*ω^2*δ_p(q⋅ξ)  + 
-    # (-im*ω*rC + rK)/ρw*δ_p(q⋅ξ - (ξ⋅î1)*η)    
-     +rK*δ_p(q⋅ξ - (ξ⋅î1)*η) 
+    (-im*ω*rC + rK)/ρw*δ_p(q⋅ξ - (ξ⋅î1)*η)    
+    #  +rK*δ_p(q⋅ξ - (ξ⋅î1)*η) 
 end 
 
 l((w,u,v,ξ)) =  ∫( w*vxᵢₙ )dΓin - ∫( ηd*w - ∇ₙϕd*(u + αₕ*w) )dΓd1 #+
@@ -313,7 +322,8 @@ op = AffineFEOperator(a,l,X,Y)
 (ϕₕ,κₕ,ηₕ,qₕ) = solve(op)
 xΓκ = get_cell_coordinates(Γκ)
 
-@show qₕ(Point(90.0,0.0))
+q_vals = get_free_dof_values(qₕ)
+@show q_vals
 
 # Generating input waves on FS
 xΓη = get_cell_coordinates(Γη)
@@ -337,7 +347,7 @@ if vtk_output == true
     cellfields = ["phi_re" => real(ϕₕ),"phi_im" => imag(ϕₕ),
     "phi_abs" => abs(ϕₕ), "phi_ang" => angle∘(ϕₕ)])
 
-  writevtk(Ω,filename * "_R_sol.vtu",
+  writevtk(q_model,filename * "_R_sol.vtu",
     cellfields = ["q_re" => real(qₕ⋅î1),"q_im" => imag(qₕ⋅î1),
     "q_abs" => abs(qₕ⋅î1), "q_ang" => angle∘(qₕ⋅î1)])
 
@@ -361,10 +371,14 @@ end
 ηx = ∇(ηₕ)⋅VectorValue(1.0,0.0)
 Pd = sum(∫( abs(ηx)*abs(ηx) )dΓm)
 Pd = 0.5*Tᵨ*ρw*τ*ω*ω*Pd
-q_abs = abs(qₕ(Point(90.0,0.0))⋅î1)
-Pd_r = 0.5*rC*ω*ω*q_abs*q_abs # resonator damping
+q_vals = [qₕ(p)⋅î1 for p in pts]   # complex
+ηr_vals = [ηₕ(p) for p in pts]
+q_abs = abs.(q_vals)
+ηr_abs = abs.(ηr_vals)
+Pd_r = sum(0.5*rC*ω^2*abs2.(q_vals .- ηr_vals)) # resonator damping
 Pd_total = Pd + Pd_r
 @show q_abs
+@show ηr_abs
 @show Pd_r
 
 # Wave energy flux

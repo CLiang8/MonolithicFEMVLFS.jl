@@ -24,25 +24,20 @@ H0 = 10 #m #still-water depth
 @show g #defined in .Constants
 @show mᵨ = 0.9 #mass per unit area of membrane / ρw
 @show Tᵨ = 0.1/4*g*Lm*Lm #T/ρw
-@show τ = 0.0#damping coeff
+@show τ = 0.0 #damping coeff
 diriFlag = false
 
 # Resonator properties
 rM = 1.0e3 #Kg
 rK = 5.9e3 #N/m
-ζ = 0 # 0.05 #damping ratio
+ζ = 0.05 # 0.05 #damping ratio
 rC = 2*ζ*sqrt(rK*rM) #N*s/m
 println("Resonator Natural Frequency: ω1 = ", sqrt(rK/rM), "rad/s")
 println("Damping coefficient: rC = ", rC, "N*s/m")
 println()
 
-# m_s = 0.25 # mass per unit area of oscillator 
-# k_s = 1.50 # spring stiffness per unit area of oscillator 
-# c_s = 0.1 # damping coefficient per unit area of oscillator
-# @show k_sρ  
-
 # Wave parameters
-ω = 1.5 #3.45#2.4
+ω = 3 #3.45#2.4
 η₀ = 0.10
 k = dispersionRelAng(H0, ω)
 λ = 2*π/k
@@ -60,10 +55,10 @@ println()
 
 
 # Domain 
-nx = 3120
+nx = 1650
 ny = 20
 mesh_ry = 1.2 #Ratio for Geometric progression of eleSize
-Ld = 60*H0 #damping zone length
+Ld = 15*H0 #damping zone length
 LΩ = 18*H0 + Ld
 x₀ = -Ld
 domain =  (x₀, x₀+LΩ, -H0, 0.0)
@@ -257,8 +252,12 @@ Y = MultiFieldFESpace([V_Ω, V_Γκ, V_Γη, V_Γq])
 # ffff(x) = -1
 # ffff_cf = CellField(ffff,Ω)
 # δ_p = DiracDelta(model, Point(90.0,0.0) )
+pts = [Point(90.0, 0.0),
+       Point(95.0, 0.0)]
+# pts = [Point(90.0, 0.0)]
+δ_p = DiracDelta(Γ, pts)
 δΩ_p = DiracDelta(Ω, Point(110.0,0.0) )
-δ_p = DiracDelta(Γ, [Point(90.0,0.0)] )
+# δ_p = DiracDelta(Γ, [Point(90.0,0.0)] )
 # δ_p = DiracDelta(Γm, tags=["mem_bnd"])
 # @show δ_p = DiracDelta{0}(model,tags="mem_bnd")
 # @show δ_p = DiracDelta{0}(Ω,tags="mem_bnd")
@@ -269,17 +268,24 @@ Y = MultiFieldFESpace([V_Ω, V_Γκ, V_Γη, V_Γq])
 # Weak form
 ∇ₙ(ϕ) = ∇(ϕ)⋅VectorValue(0.0,1.0)
 if(diriFlag)
-  a((ϕ,κ,η),(w,u,v)) =      
+  a((ϕ,κ,η,q),(w,u,v,ξ)) =      
     ∫(  ∇(w)⋅∇(ϕ) )dΩ   +
     ∫(  βₕ*(u + αₕ*w)*(g*κ - im*ω*ϕ) + im*ω*w*κ )dΓfs   +
     ∫(  βₕ*(u + αₕ*w)*(g*κ - im*ω*ϕ) + im*ω*w*κ 
       - μ₂ᵢₙ*κ*w + μ₁ᵢₙ*∇ₙ(ϕ)*(u + αₕ*w) )dΓd1    +
     ∫( -w * im * k * ϕ )dΓot +
     # ∫(  βₕ*(u + αₕ*w)*(g*κ - im*ω*ϕ) + im*ω*w*κ 
-      # - μ₂ₒᵤₜ*κ*w + μ₁ₒᵤₜ*∇ₙ(ϕ)*(u + αₕ*w) )dΓd2    +
+    #   - μ₂ₒᵤₜ*κ*w + μ₁ₒᵤₜ*∇ₙ(ϕ)*(u + αₕ*w) )dΓd2    +
     ∫(  v*(g*η - im*ω*ϕ) +  im*ω*w*η
-      - mᵨ*v*ω^2*η + Tᵨ*(1-im*ω*τ)*∇(v)⋅∇(η) )dΓm  + 
-    ∫(- Tᵨ*(1-im*ω*τ)*v*∇(η)⋅nΛmb )dΛmb #diri
+      - mᵨ*v*ω^2*η + Tᵨ*(1-im*ω*τ)*∇(v)⋅∇(η) )dΓm  +    
+    ∫(- Tᵨ*(1-im*ω*τ)*v*∇(η)⋅nΛmb )dΛmb + #diri
+    (+im*ω*rC - rK)/ρw*δ_p( v*( (q⋅î1) - η ) ) +  #new coupling term  
+    #  +rK/ρw*δ_p( v*( (q⋅î1) - η ) ) +
+     ∫( (ξ⋅q)* 0.0 )dΩ  + 
+    # ∫( -rM/cnstFEArea*ω^2*(q⋅ξ) + rK/cnstFEArea*(ξ⋅q) )dΩ +
+     -rM/ρw*ω^2*δ_p(q⋅ξ)  + 
+    (-im*ω*rC + rK)/ρw*δ_p(q⋅ξ - (ξ⋅î1)*η)    
+    #  +rK*δ_p(q⋅ξ - (ξ⋅î1)*η)
 
 else
   a((ϕ,κ,η,q),(w,u,v,ξ)) =      
@@ -312,7 +318,7 @@ op = AffineFEOperator(a,l,X,Y)
 (ϕₕ,κₕ,ηₕ,qₕ) = solve(op)
 xΓκ = get_cell_coordinates(Γκ)
 
-@show qₕ(Point(90.0,0.0))
+@show qₕ(pts)
 
 # Generating input waves on FS
 xΓη = get_cell_coordinates(Γη)
@@ -360,9 +366,11 @@ end
 ηx = ∇(ηₕ)⋅VectorValue(1.0,0.0)
 Pd = sum(∫( abs(ηx)*abs(ηx) )dΓm)
 Pd = 0.5*Tᵨ*ρw*τ*ω*ω*Pd
-q_abs = abs(qₕ(Point(90.0,0.0))⋅î1)
-ηr_abs = abs(ηₕ(Point(90.0,0.0)))
-Pd_r = 0.5*rC*ω*ω*(q_abs - ηr_abs)^2 # resonator damping
+q_vals = [qₕ(p)⋅î1 for p in pts]   # complex
+ηr_vals = [ηₕ(p) for p in pts]
+q_abs = abs.(q_vals)
+ηr_abs = abs.(ηr_vals)
+Pd_r = sum(0.5*rC*ω^2*abs2.(q_vals .- ηr_vals)) # resonator damping
 Pd_total = Pd + Pd_r
 @show q_abs
 @show ηr_abs

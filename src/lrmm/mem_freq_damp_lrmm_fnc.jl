@@ -38,6 +38,7 @@ function main(params)
     @show αₕ
     println()  
 
+
     # Damping
     # Ldw = min( 5.0*λ, Ld )
     μ₀ = 2.5#maximum([2.5, 5.24/(ω^0.922)])#2.5
@@ -49,7 +50,7 @@ function main(params)
     ∇ₙϕd(x) = μ₁ᵢₙ(x)*vzfsᵢₙ(x) #???
 
     # oscillatory positon
-    δ_p = DiracDelta(Γ, [Point(90.0,0.0)] )
+    δ_p = DiracDelta(Γ, pts)
 
     # Weak form
     ∇ₙ(ϕ) = ∇(ϕ)⋅VectorValue(0.0,1.0)
@@ -88,11 +89,16 @@ function main(params)
     ηx = ∇(ηₕ)⋅VectorValue(1.0,0.0)
     Pd = sum(∫( abs(ηx)*abs(ηx) )dΓm)
     Pd = 0.5*Tᵨ*ρw*τ*ω*ω*Pd
-    q_abs = abs(qₕ(Point(90.0,0.0))⋅î1)
-    Pd_r = 0.5*rC*ω*ω*q_abs*q_abs # resonator damping
+    q_vals = [qₕ(p)⋅î1 for p in pts]   # complex
+    ηr_vals = [ηₕ(p) for p in pts]
+    q_abs = abs.(q_vals)
+    ηr_abs = abs.(ηr_vals)
+    Pd_r = sum(0.5*rC*ω^2*abs2.(q_vals .- ηr_vals)) # resonator damping
     Pd_total = Pd + Pd_r
     @show q_abs
+    @show ηr_abs
     @show Pd_r
+
 
     # Wave energy flux
     ηrf = abs(κr(Point(prbPowx[1],0.0)))
@@ -162,6 +168,10 @@ function main(params)
   println("Resonator Natural Frequency: ω1 = ", sqrt(rK/rM), "rad/s")
   println("Damping coefficient: rC = ", rC, "N*s/m")
 
+  # DiracDelta
+  @unpack pts = params
+  @show pts
+
   # Domain 
   @unpack nx, ny, mesh_ry, Ld, Lm, LΩ, x₀ = params
   @unpack domain, partition, xdᵢₙ, xm₀, xm₁ = params
@@ -186,7 +196,6 @@ function main(params)
   @show βₕ
   # @show αₕ
   println()
-
 
 
   # Mesh
@@ -462,6 +471,8 @@ Parameters for the VIV.jl module.
   ζ = 0 # 0.05 #damping ratio
   rC = 2*ζ*sqrt(rK*rM) #N*s/m
 
+  #DiracDelta
+  pts = [Point(90.0, 0.0)] 
 
   # Domain 
   nx = 330
@@ -501,7 +512,7 @@ end
   # η₀ = η₀[2:end]
   # ω = [2*π/2.53079486745378, 2*π/2.0]
   # η₀ = [0.25, 0.25]
-  ω = 0.7:0.5:5
+  ω = 0.7:0.05:5
   T = 2*π./ω
   η₀ = 0.10*ones(length(ω))
   α = randomPhase(ω; seed=100)
@@ -516,16 +527,19 @@ end
 
   #oscillator parameters
   rM = 1.0e3 #Kg
-  rK = 5.9e3 #N/m
+  rω = 4.642 #rad/s
+  rK = rM*rω^2 #N/m
   ζ = 0 # 0.05 #damping ratio
   rC = 2*ζ*sqrt(rK*rM) #N*s/m
 
+  #DiracDelta
+  pts = [Point(90.0, 0.0)] 
 
   # Domain 
-  nx = 1650
+  nx = 3900
   ny = 20
   mesh_ry = 1.2 #Ratio for Geometric progression of eleSize
-  Ld = 15*H0 #damping zone length
+  Ld = 60*H0 #damping zone length
   LΩ = 18*H0 + Ld #2*Ld
   x₀ = -Ld
   domain =  (x₀, x₀+LΩ, -H0, 0.0)
