@@ -50,7 +50,8 @@ function main(params)
     ∇ₙϕd(x) = μ₁ᵢₙ(x)*vzfsᵢₙ(x) #???
 
     # oscillatory positon
-    δ_p = DiracDelta(Γ, pts)
+    # δ_p = DiracDelta(Γ, pts)
+    δ_p = DiracDelta(Γ, [Point(xr, 0.0)])
 
     # Weak form
     ∇ₙ(ϕ) = ∇(ϕ)⋅VectorValue(0.0,1.0)
@@ -89,8 +90,10 @@ function main(params)
     ηx = ∇(ηₕ)⋅VectorValue(1.0,0.0)
     Pd = sum(∫( abs(ηx)*abs(ηx) )dΓm)
     Pd = 0.5*Tᵨ*ρw*τ*ω*ω*Pd
-    q_vals = [qₕ(p)⋅î1 for p in pts]   # complex
-    ηr_vals = [ηₕ(p) for p in pts]
+    # q_vals = [qₕ(p)⋅î1 for p in pts]   # complex
+    # ηr_vals = [ηₕ(p) for p in pts]
+    q_vals = qₕ(Point(xr, 0.0))⋅î1
+    ηr_vals = ηₕ(Point(xr, 0.0))
     q_abs = abs.(q_vals)
     ηr_abs = abs.(ηr_vals)
     Pd_r = sum(0.5*rC*ω^2*abs2.(q_vals .- ηr_vals)) # resonator damping
@@ -169,8 +172,10 @@ function main(params)
   println("Damping coefficient: rC = ", rC, "N*s/m")
 
   # DiracDelta
-  @unpack pts = params
-  @show pts
+  # @unpack pts = params
+  # @show pts
+  @unpack xr = params
+  @show xr
 
   # Domain 
   @unpack nx, ny, mesh_ry, Ld, Lm, LΩ, x₀ = params
@@ -472,7 +477,8 @@ Parameters for the VIV.jl module.
   rC = 2*ζ*sqrt(rK*rM) #N*s/m
 
   #DiracDelta
-  pts = [Point(90.0, 0.0)] 
+  # pts = [Point(90.0, 0.0)] # try multiple resonators
+  xr::Float64 = 90.0 # spatial scan modify 
 
   # Domain 
   nx = 330
@@ -533,7 +539,8 @@ end
   rC = 2*ζ*sqrt(rK*rM) #N*s/m
 
   #DiracDelta
-  pts = [Point(90.0, 0.0)] 
+  # pts = [Point(90.0, 0.0)]
+  xr::Float64 = 90.0 
 
   # Domain 
   nx = 3900

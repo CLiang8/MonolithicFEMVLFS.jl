@@ -15,6 +15,7 @@ export plot_contour
 function plot_contour(name::String)
     filename = joinpath(name, "mem_data.jld2")
     data = load(filename)
+    name_tag = splitpath(name)[end]   
 
     ω = data["ω"]
     η₀ = data["η₀"]
@@ -54,9 +55,9 @@ function plot_contour(name::String)
         # c = gray10,
         clims = (0, 1.0),
         xlims = (3, 6),
-        ylims = (1, 5),
+        ylims = (minimum(ω), maximum(ω)),
         aspect_ratio = 2/3,
-        title = "Normalized Amplitude",
+        title = "Normalized Amplitude $(name_tag)",
         titlefont = font(11),
         colorbar = true,
         colorbar_title = "values",
@@ -74,9 +75,21 @@ function plot_contour(name::String)
     annotate!(5.5, maximum(ω) + 0.1, text(L"|\kappa_t| / \kappa_0", :black, 8, :center))
 
     # （可选）添加横向频率分段线
-    ω_ticks = range(minimum(ω), stop=maximum(ω), length=5)
+    # ω_ticks = range(minimum(ω), stop=maximum(ω), length=5)
+    ω_ticks = range(1, stop=maximum(ω), length=5)
     hline!(ω_ticks, lw=1, linestyle=:dot, color=:white, label="")
 
+    # 添加红色箭头指示振子位置，默认90.0
+    xr_match = match(r"xr_(\d+\.?\d*)", name)
+    xr = xr_match !== nothing ? parse(Float64, xr_match.captures[1]) : 90.0
+    xr_norm = xr / Lm
+    arrow_y = minimum(ω)-0.02  # 贴近 x 轴
+
+    scatter!([xr_norm], [arrow_y],
+    markershape = :utriangle,
+    markercolor = :red,
+    markersize = 4,
+    label = "")
 
     savefig(plt, joinpath(name, "response_contour_zoned.png"))
     println("✅ Saved: response_contour_zoned.png")
@@ -95,6 +108,7 @@ export plot_coefficients
 
 function plot_coefficients(name::String)
     file = joinpath(name, "mem_data.jld2")
+    name_tag = splitpath(name)[end] 
     data = load(file)
     println("Loading and plotting energy coefficients...")
 
@@ -112,7 +126,7 @@ function plot_coefficients(name::String)
     Err = 1 .- (Kr .+ Kt .+ Ka)
 
     # 反射系数 Kr
-    plot(ω, Kr, label="Kr (Reflected)", lw=2)
+    plot(ω, Kr, label="Kr_$name_tag", lw=2)
     xlabel!("ω (rad/s)")
     ylabel!("Kr")
     title!("Reflection Coefficient vs Frequency")

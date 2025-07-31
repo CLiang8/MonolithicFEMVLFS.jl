@@ -3,26 +3,24 @@ module run_lrmm
 using DrWatson
 using Parameters
 using WaveSpec
+using Gridap
 using .Constants
 
 @quickactivate "MonolithicFEMVLFS.jl"
 
 # Here you may include files from the source directory
 include(srcdir("lrmm","mem_freq_damp_lrmm_fnc.jl"))
-include("plot.jl")
-
-using .plot_response_contour
-using .plot_energy_coefficients
+# include("plot.jl")
 
 resDir::String = "data/sims_mem_freq_lrmm"
 
-# Warm-up run
-params = Memb_undamped_2D.Memb_params_warmup(name = resDir*"/Coefficients")
-Memb_undamped_2D.main(params)
-
-# # trial run for a different resonator frequency
-# params = Memb_undamped_2D.Memb_params(name = resDir*"/Coefficients")
+# # Warm-up run
+# params = Memb_undamped_2D.Memb_params_warmup(name = resDir*"/Coefficients")
 # Memb_undamped_2D.main(params)
+
+# trial run for a different resonator frequency
+params = Memb_undamped_2D.Memb_params(name = resDir*"/Coefficients")
+Memb_undamped_2D.main(params)
 
 # production run
 @with_kw struct run_params
@@ -41,7 +39,7 @@ Memb_undamped_2D.main(params)
   # η₀ = η₀[2:end]
   # ω = [2*π/2.53079486745378, 2*π/2.0]
   # η₀ = [0.25, 0.25]
-  ω = 0.7:0.05:5.0
+  ω = 0.7:0.05:5.0 
   T = 2*π./ω
   η₀ = 0.10*ones(length(ω))
   α = randomPhase(ω; seed=100)
@@ -62,7 +60,8 @@ Memb_undamped_2D.main(params)
   rC = 2*ζ*sqrt(rK*rM) #N*s/m
 
   #DiracDelta
-  pts = [Point(95.0, 0.0)]
+  # pts = [Point(95.0, 0.0)]
+  xr::Float64 = 90.0
 
   # Domain 
   nx = 1650
@@ -86,14 +85,14 @@ Memb_undamped_2D.main(params)
 
 end
 params = run_params()
-Memb_undamped_2D.main(params)
+# Memb_undamped_2D.main(params)
 
-plot_contour(params.name)
-plot_coefficients(params.name)
+# plot_contour(params.name)
+# plot_coefficients(params.name)
 
-# ------------ ωr sweep (natural frequency of spring) ---------------
-# rω_list = [1.5, 2.0, 2.5]  # rad/s
-rω_list = [0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0]  # rad/s
+# ------------ rω sweep (natural frequency of spring) -----------------
+rω_list = 3.65:0.05:5.0  # rad/s  运行时中间3.65卡了一次
+# rω_list = [0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0]  # rad/s
 for rω in rω_list
     rM = 1.0e3  # 固定质量
     rK = rM * rω^2
@@ -124,6 +123,8 @@ end
 include("plot.jl")
 using .plot_response_contour
 using .plot_energy_coefficients
+
+rω_list = 0.7:0.05:5.0  # rad/s
 
 for rω in rω_list
     name = "data/sims_mem_freq_lrmm/Frequency_scan/rω_$(round(rω; digits=2))"

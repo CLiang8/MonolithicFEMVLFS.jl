@@ -30,14 +30,15 @@ diriFlag = false
 # Resonator properties
 rM = 1.0e3 #Kg
 rK = 5.9e3 #N/m
-ζ = 0.05 # 0.05 #damping ratio
+# rK = 500
+ζ = 0 # 0.05 #damping ratio
 rC = 2*ζ*sqrt(rK*rM) #N*s/m
 println("Resonator Natural Frequency: ω1 = ", sqrt(rK/rM), "rad/s")
 println("Damping coefficient: rC = ", rC, "N*s/m")
 println()
 
 # Wave parameters
-ω = 3 #3.45#2.4
+ω = 2.4 #3.45#2.4
 η₀ = 0.10
 k = dispersionRelAng(H0, ω)
 λ = 2*π/k
@@ -55,7 +56,7 @@ println()
 
 
 # Domain 
-nx = 1650
+nx = 1650 #6600
 ny = 20
 mesh_ry = 1.2 #Ratio for Geometric progression of eleSize
 Ld = 15*H0 #damping zone length
@@ -252,10 +253,10 @@ Y = MultiFieldFESpace([V_Ω, V_Γκ, V_Γη, V_Γq])
 # ffff(x) = -1
 # ffff_cf = CellField(ffff,Ω)
 # δ_p = DiracDelta(model, Point(90.0,0.0) )
-pts = [Point(90.0, 0.0),
-       Point(95.0, 0.0)]
 # pts = [Point(90.0, 0.0)]
-δ_p = DiracDelta(Γ, pts)
+# δ_p = DiracDelta(Γ, pts)
+xr::Float64 = 90.0
+δ_p = DiracDelta(Γ, [Point(xr, 0.0)])
 δΩ_p = DiracDelta(Ω, Point(110.0,0.0) )
 # δ_p = DiracDelta(Γ, [Point(90.0,0.0)] )
 # δ_p = DiracDelta(Γm, tags=["mem_bnd"])
@@ -318,7 +319,8 @@ op = AffineFEOperator(a,l,X,Y)
 (ϕₕ,κₕ,ηₕ,qₕ) = solve(op)
 xΓκ = get_cell_coordinates(Γκ)
 
-@show qₕ(pts)
+# @show qₕ(pts)
+@show qₕ(Point(xr, 0.0))
 
 # Generating input waves on FS
 xΓη = get_cell_coordinates(Γη)
@@ -366,8 +368,10 @@ end
 ηx = ∇(ηₕ)⋅VectorValue(1.0,0.0)
 Pd = sum(∫( abs(ηx)*abs(ηx) )dΓm)
 Pd = 0.5*Tᵨ*ρw*τ*ω*ω*Pd
-q_vals = [qₕ(p)⋅î1 for p in pts]   # complex
-ηr_vals = [ηₕ(p) for p in pts]
+# q_vals = [qₕ(p)⋅î1 for p in pts]   # complex
+# ηr_vals = [ηₕ(p) for p in pts]
+q_vals = qₕ(Point(xr, 0.0))⋅î1
+ηr_vals = ηₕ(Point(xr, 0.0))
 q_abs = abs.(q_vals)
 ηr_abs = abs.(ηr_vals)
 Pd_r = sum(0.5*rC*ω^2*abs2.(q_vals .- ηr_vals)) # resonator damping
