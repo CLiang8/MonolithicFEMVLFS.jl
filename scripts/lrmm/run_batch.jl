@@ -10,7 +10,7 @@ using .Constants
 
 # Here you may include files from the source directory
 include(srcdir("lrmm","mem_freq_damp_lrmm_fnc.jl"))
-# include("plot.jl")
+include("plot.jl")
 
 resDir::String = "data/sims_mem_freq_lrmm"
 
@@ -18,9 +18,9 @@ resDir::String = "data/sims_mem_freq_lrmm"
 # params = Memb_undamped_2D.Memb_params_warmup(name = resDir*"/Coefficients")
 # Memb_undamped_2D.main(params)
 
-# trial run for a different resonator frequency
-params = Memb_undamped_2D.Memb_params(name = resDir*"/Coefficients")
-Memb_undamped_2D.main(params)
+# # trial run for damping situation
+# params = Memb_undamped_2D.Memb_params(name = resDir*"/Coefficients")
+# Memb_undamped_2D.main(params)
 
 # production run
 @with_kw struct run_params
@@ -56,7 +56,7 @@ Memb_undamped_2D.main(params)
   rM = 1.0e3 #Kg
   rω = 3.0 #rad/s
   rK = rM*rω^2 #N/m
-  ζ = 0.05 # 0.05 #damping ratio
+  ζ = 0.01 # 0.05 #damping ratio
   rC = 2*ζ*sqrt(rK*rM) #N*s/m
 
   #DiracDelta

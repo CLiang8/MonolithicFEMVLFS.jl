@@ -77,19 +77,17 @@ resDir::String = "data/sims_mem_freq_lrmm"
 end
 params = run_params()
 
-resDir = "data/sims_mem_freq_lrmm"
-# xr_list = 81:1:99
-xr_list = [80.05, 82.5, 80+10/3, 85, 80+20/3, 87.5, 90, 92.5, 90+10/3, 95, 90+20/3, 97.5, 99.95]
+ζ_list = [0.0, 0.02, 0.05, 0.1, 0.5]
 
-#--------------------------- Run spatial scan ---------------------------
-for xr in xr_list
+#--------------------------- Run damping scan ---------------------------
+for ζ in ζ_list
     rω = 2.41 #3 # rad/s  
     rM = 1.0e3
     rK = rM * rω^2
-    ζ = 0.0
     rC = 2 * ζ * sqrt(rK * rM)
+    # xr = 90.0 
 
-    name = joinpath(resDir, "Spatial_scan_2.41", "xr_$(round(xr; digits=1))")
+    name = joinpath(resDir, "Damping_scan", "ζ_$(round(ζ; digits=3))")
     mkpath(name)
 
     params = run_params(;
@@ -99,11 +97,11 @@ for xr in xr_list
         rK = rK,
         ζ = ζ,
         rC = rC,
-        xr = xr  
+        # xr = xr  
     )
 
-    @show params.xr
-    println("▶ Running for x_r = $xr m ...")
+    @show params.ζ
+    println("▶ Running for ζ = $ζ ...")
     Memb_undamped_2D.main(params)
 end
 
@@ -114,12 +112,11 @@ include("plot.jl")
 using .plot_response_contour
 using .plot_energy_coefficients
 
-# 振子位置列表（单位：米）
-xr_list = [80.05, 82.5, 80+10/3, 85, 80+20/3, 87.5, 90, 92.5, 90+10/3, 95, 90+20/3, 97.5, 99.95]
-# xr_list = 81:1:99
+# damping ratio list
+ζ_list = [0.0, 0.02, 0.05, 0.1, 0.5]
 
-for xr in xr_list
-    name = "data/sims_mem_freq_lrmm/Spatial_scan_2.41/xr_$(round(xr; digits=1))"
+for ζ in ζ_list
+    name = "data/sims_mem_freq_lrmm/Damping_scan/ζ_$(round(ζ; digits=3))"
     if isfile(joinpath(name, "mem_data.jld2"))
         plot_contour(name)          # 会自动从 name 中识别 xr 并绘制箭头
         plot_coefficients(name)
@@ -128,22 +125,22 @@ for xr in xr_list
     end
 end
 
-# --------------------------------Plot spatial scan heatmap----------------------------------
-module plot_spatial_scan
+# --------------------------------Plot damping scan heatmap----------------------------------
+module plot_damping_scan
 using JLD2, Plots, DataFrames, LaTeXStrings
 
-# 参数
-resDir = "data/sims_mem_freq_lrmm/Spatial_scan_2.41"
-# xr_list = 81:1:99
-xr_list = [80.05, 82.5, 80+10/3, 85, 80+20/3, 87.5, 90, 92.5, 90+10/3, 95, 90+20/3, 97.5, 99.95]
+# parameters
+resDir = "data/sims_mem_freq_lrmm/Damping_scan"
+ζ_list = [0.0, 0.02, 0.05, 0.1, 0.5]
 Kr_list, Kt_list, Ka_list, Err_list = [], [], [], []
 
-# 读取第一个文件的 ω 作为统一频率参考
-first_file = joinpath(resDir, "xr_$(round(xr_list[1]; digits=1))", "mem_data.jld2")
+# extract ω from the first file
+first_file = joinpath(resDir, "ζ_$(round(ζ_list[1]; digits=3))", "mem_data.jld2")
 ω_ref = load(first_file)["ω"]
 
-for xr in xr_list
-    folder = joinpath(resDir, "xr_$(round(xr; digits=1))")
+# load data for each ζ
+for ζ in ζ_list
+    folder = joinpath(resDir, "ζ_$(round(ζ; digits=3))")
     file = joinpath(folder, "mem_data.jld2")
     if !isfile(file)
         @warn "Missing data at $folder"
@@ -168,39 +165,34 @@ for xr in xr_list
     push!(Ka_list, Ka)
     push!(Err_list, Err)
 end
-size(Kr_list)
-println(Kr_list)
-# 转为矩阵（size: n_xr × n_ω）
-Kr_mat = hcat(Kr_list...)
-Kt_mat = hcat(Kt_list...)
-Ka_mat = hcat(Ka_list...)
-Err_mat = hcat(Err_list...)
-# Kr_mat = transpose(Kr_mat)'
+
+# reshape to Matrix（n_ζ * n_ω）
+Kr_mat = hcat(Kr_list...)'
+Kt_mat = hcat(Kt_list...)'
+Ka_mat = hcat(Ka_list...)'
+Err_mat = hcat(Err_list...)'
 
 out_dir = joinpath(resDir, "merged")
 mkpath(out_dir)
 
-# 统一绘图函数
-function plot_energy_map(Z, ω, xr_list; title="", savepath="")
+# plot function
+function plot_energy_map(Z, ω, ζ_list; title="", savepath="")
     heatmap(
-        (xr_list .- 80) ./ 20.0, ω, Z,  # 👈 x轴为位置，y轴为频率
-        xlabel = L"L_m",                    
-        ylabel = L"\omega\ (rad/s)",
-        xlims = (0, 1.0),
-        ylims = (minimum(ω), maximum(ω)),
-        c = cgrad([RGB(0.95,0.95,0.95),RGB(0.2,0.2,0.2)]),
+        ω, ζ_list, Z,
+        xlabel = L"wave frequency $\omega\ (rad/s)$",
+        ylabel = L"Damping ratio $\zeta$",
+        xlims = (minimum(ω), maximum(ω)),
+        ylims = (minimum(ζ_list), maximum(ζ_list)),
+        c = cgrad([RGB(0.95,0.95,0.95), RGB(0.2,0.2,0.2)]),
         colorbar_title = "Value",
         clims = (0, 1.0),
-        # aspect_ratio = 2/3,
-        title = title,
-        
-        dpi = 600
+        dpi = 600,
+        title = title
     )
-    # 添加横向分割线
-    ω_ticks = range(1, stop=maximum(ω), length=5)
-    hline!(ω_ticks, lw=1, linestyle=:dot, color=:white, label="")
     # add dash line
-    vline!([0.25,0.5,0.75], lw=1, linestyle=:dot, color=:white, label="")
+    ω_ticks = range(minimum(ω), stop=maximum(ω), length=5)
+    vline!(ω_ticks, lw=1, linestyle=:dot, color=:white, label="")
+    hline!([0.02, 0.05, 0.1, 0.5], lw=1, linestyle=:dot, color=:white, label="")
 
     if savepath != ""
         savefig(savepath)
@@ -208,10 +200,10 @@ function plot_energy_map(Z, ω, xr_list; title="", savepath="")
     end
 end
 
-# 输出图像
-plot_energy_map(Kr_mat, ω_ref, xr_list, title=L"K_r", savepath=joinpath(out_dir, "Kr_map.png"))
-plot_energy_map(Kt_mat, ω_ref, xr_list, title=L"K_t", savepath=joinpath(out_dir, "Kt_map.png"))
-plot_energy_map(Ka_mat, ω_ref, xr_list, title=L"K_a", savepath=joinpath(out_dir, "Ka_map.png"))
-plot_energy_map(Err_mat, ω_ref, xr_list, title="Energy Balance Error", savepath=joinpath(out_dir, "Error_map.png"))
+# plot output
+plot_energy_map(Kr_mat, ω_ref, ζ_list, title=L"K_r", savepath=joinpath(out_dir, "Kr_map.png"))
+plot_energy_map(Kt_mat, ω_ref, ζ_list, title=L"K_t", savepath=joinpath(out_dir, "Kt_map.png"))
+plot_energy_map(Ka_mat, ω_ref, ζ_list, title=L"K_a", savepath=joinpath(out_dir, "Ka_map.png"))
+plot_energy_map(Err_mat, ω_ref, ζ_list, title="Energy Balance Error", savepath=joinpath(out_dir, "Error_map.png"))
 
-end # module plot_spatial_scan
+end # module plot_damping_scan

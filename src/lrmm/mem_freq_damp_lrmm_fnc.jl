@@ -136,7 +136,7 @@ function main(params)
     push!(prbDaΓκ, κₕ(prxΓκ))
     push!(prbDaΓκr, κr(prxΓκ))
 
-    push!(prbPow, [Pin, Prf, Ptr, Pd, PErr, 0.0])
+    push!(prbPow, [Pin, Prf, Ptr, Pd_total, PErr, 0.0])
     
     tock()
     return 0
