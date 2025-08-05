@@ -8,7 +8,6 @@ using DataFrames
 using WaveSpec.Constants
 using LaTeXStrings
 using Colors
-using Measures
 
 export plot_contour
 
