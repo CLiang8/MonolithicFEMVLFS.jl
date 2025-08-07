@@ -67,12 +67,10 @@ function main(params)
       - mᵨ*v*ω^2*η + Tᵨ*(1-im*ω*τ)*∇(v)⋅∇(η) )dΓm  +    
     #∫(- Tᵨ*(1-im*ω*τ)*v*∇(η)⋅nΛmb )dΛmb #diri
     (+im*ω*rC - rK)/ρw*δ_p( v*( (q⋅î1) - η ) ) +  #new coupling term  
-    #  +rK/ρw*δ_p( v*( (q⋅î1) - η ) ) +
-     ∫( (ξ⋅q)* 0.0 )dΩ  + 
+    ∫( (ξ⋅q)* 0.0 )dΩ  + 
     # ∫( -rM/cnstFEArea*ω^2*(q⋅ξ) + rK/cnstFEArea*(ξ⋅q) )dΩ +
-     -rM/ρw*ω^2*δ_p(q⋅ξ)  + 
-    (-im*ω*rC + rK)/ρw*δ_p(q⋅ξ - (ξ⋅î1)*η)    
-    #  +rK*δ_p(q⋅ξ - (ξ⋅î1)*η) 
+    -rM/ρw*ω^2*δ_p(q⋅ξ)  + 
+    (-im*ω*rC + rK)/ρw*δ_p(q⋅ξ - (ξ⋅î1)*η)     
 
     l((w,u,v,ξ)) =  ∫( w*vxᵢₙ )dΓin - ∫( ηd*w - ∇ₙϕd*(u + αₕ*w) )dΓd1
 
