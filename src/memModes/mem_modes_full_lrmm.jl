@@ -69,11 +69,7 @@ println()
 μ₂ᵢₙ(x) = μ₁ᵢₙ(x)*k
 μ₂ₒᵤₜ(x) = μ₁ₒᵤₜ(x)*k
 ηd(x) = μ₂ᵢₙ(x)*ηᵢₙ(x)
-#∇ₙϕd(x) = μ₁ᵢₙ(x)*vzfsᵢₙ(x) #???
-
-# Dirac delta
-xr::Float64 = 90.0
-δ_p = DiracDelta(Γ, [Point(xr, 0.0)])
+# ∇ₙϕd(x) = μ₁ᵢₙ(x)*vzfsᵢₙ(x) #???
 
 
 # Mesh
@@ -181,6 +177,11 @@ dΓin = Measure(Γin,degree)
 dΛmb = Measure(Λmb,degree)
 
 
+# Dirac delta
+xr::Float64 = 30.0
+δ_p = DiracDelta(Γ, [Point(xr, 0.0)])
+
+
 # Normals
 @show nΛmb = get_normal_vector(Λmb)
 
@@ -235,18 +236,19 @@ k33(κ,u) = ∫( u*g*κ )dΓfs  +
     ∫( u*g*κ )dΓd2  
 
 # Spring-mass-damper oscillator coupling terms
-k11r(η, v) = - (i*ω*rC - rK) * δ_p(v * η)
+k11r(η, v) = - (im*ω*rC - rK) * δ_p(v * η)
 
-m44(q, ξ) = rM * δ_p((q⋅î1) * ξ)
-k44(q, ξ) = (rK - i*ω*rC) * δ_p((q⋅î1) * ξ)
+m44(q, ξ) = rM * δ_p(q⋅ξ)
+k44(q, ξ) = (rK - im*ω*rC) * δ_p(q⋅ξ)
 
-c14(q, v) = (i*ω*rC - rK) * δ_p(v * (q⋅î1))
-c41(η, ξ) = (-i*ω*rC + rK) * δ_p(ξ * η)
+c14(q, v) = (im*ω*rC - rK) * δ_p(v * (q⋅î1))
+c41(η, ξ) = -(-im*ω*rC + rK) * δ_p((ξ⋅î1) * η)
 
 l1(v) = ∫( 0*v )dΓm
 l2(w) = ∫( 0*w )dΩ
 l3(u) = ∫( 0*u )dΓfs + ∫( 0*u )dΓd1 + ∫( 0*u )dΓd2
-l4(ξ) = ∫(0 * ξ) * dΩ
+zero_vec = VectorValue(0.0+0im)
+l4(ξ) = ∫( zero_vec ⋅ ξ )dΩ
 println("[MSG] Done Weak form")
 
 # Global matrices
@@ -262,10 +264,10 @@ C23 = get_matrix(AffineFEOperator( c23, l2, U_Γκ, V_Ω ))
 C32 = get_matrix(AffineFEOperator( c32, l3, U_Ω, V_Γκ ))
 K33 = get_matrix(AffineFEOperator( k33, l3, U_Γκ, V_Γκ ))
 
-M44 = get_matrix(AffineFEOperator(m44, l4, U_q, V_q))
-K44 = get_matrix(AffineFEOperator(k44, l4, U_q, V_q))
-C14 = get_matrix(AffineFEOperator(c14, l4, U_q, V_Γη))
-C41 = get_matrix(AffineFEOperator(c41, l4, U_Γη, V_q))
+M44 = get_matrix(AffineFEOperator(m44, l4, U_Γq, V_Γq))
+K44 = get_matrix(AffineFEOperator(k44, l4, U_Γq, V_Γq))
+C14 = get_matrix(AffineFEOperator(c14, l1, U_Γq, V_Γη))
+C41 = get_matrix(AffineFEOperator(c41, l4, U_Γη, V_Γq))
 println("[MSG] Done Global matrices")
 
 # Solution
@@ -283,15 +285,20 @@ tock()
 λ = LinearAlgebra.eigvals(Mtot\Matrix(Ktot))
 V = LinearAlgebra.eigvecs(Mtot\Matrix(Ktot))
 @show sum(imag.(λ))
-ωₙ = sqrt.(real.(λ))
-@show ind = findall(ωₙ.<5)
+ωₙ = real.(sqrt.(Complex.(λ)))
+@show ind = findall(ωₙ.<7)
 @show ωₙ[ind]
 xp = range(xm₀, xm₁, size(V,2))
+da_V = [V[:, i] for i in 1:size(V, 2)]
+
+@show typeof(da_V) # Check type of da_V elements
+@show sizeof(da_V) # Check size of da_V elements
 
 data = Dict(
   "xp" => xp,
   "λ" => λ,
-  "V" => V,
+  "ωₙ" => ωₙ,
+  "V" => da_V,
   "Mtot" => Mtot,
   "K11" => K11
 )

@@ -251,11 +251,13 @@ V = LinearAlgebra.eigvecs(Mtot\Matrix(K11))
 @show ind = findall(ωₙ.<5)
 @show ωₙ[ind]
 xp = range(xm₀, xm₁, size(V,2))
+da_V = [V[:, i] for i in 1:size(V, 2)]
 
 data = Dict(
   "xp" => xp,
   "λ" => λ,
-  "V" => V,
+  "ωₙ" => ωₙ,
+  "V" => da_V,
   "Mtot" => Mtot,
   "K11" => K11
 )

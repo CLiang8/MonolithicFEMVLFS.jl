@@ -19,37 +19,52 @@ function run_freq(ω)
   # Weak form: ω dependent
   k22(ϕ,w) = ∫( ∇(w)⋅∇(ϕ) )dΩ +
       ∫( -w * im * k * ϕ )dΓin + ∫( -w * im * k * ϕ )dΓot
-
   c23(κ,w) = ∫( im*ω*w*κ )dΓfs 
-
   c32(ϕ,u) = ∫( -im*ω*u*ϕ )dΓfs 
   
+  # Weak form ：ω dependent resonator
+  k11r(η, v) = - (im*ω*rC - rK) * δ_p(v * η)
+  k44(q, ξ) = (rK - im*ω*rC) * δ_p(q⋅ξ)
+  c14(q, v) = (im*ω*rC - rK) * δ_p(v * (q⋅î1))
+  c41(η, ξ) = -(-im*ω*rC + rK) * δ_p((ξ⋅î1) * η)
+
   # Global matrices: ω dependent
+  K11r = get_matrix(AffineFEOperator(k11r, l1, U_Γη, V_Γη))
   K22 = get_matrix(AffineFEOperator( k22, l2, U_Ω, V_Ω ))
   C23 = get_matrix(AffineFEOperator( c23, l2, U_Γκ, V_Ω ))
   C32 = get_matrix(AffineFEOperator( c32, l3, U_Ω, V_Γκ ))
+  K44 = get_matrix(AffineFEOperator(k44, l4, U_Γq, V_Γq))
+  C14 = get_matrix(AffineFEOperator(c14, l1, U_Γq, V_Γη))
+  C41 = get_matrix(AffineFEOperator(c41, l4, U_Γη, V_Γq))
 
-  # Solution
   tick()
   Mϕ = K22 - ( C23 * (Matrix(K33) \ C32) )
   Mhat = C12 * (Mϕ \ C21)
   Mtot = M11 + Mhat
+
+  # Spring-mass coupling
+  Rosc = -C14 * ((-ω^2 * M44 + K44) \ C41)
+  Ktot = K11 + K11r + Rosc
+
   tock()
 
   # Eigen values
-  λ = LinearAlgebra.eigvals(Mtot\Matrix(K11))
-  V = LinearAlgebra.eigvecs(Mtot\Matrix(K11))  
+  λ = LinearAlgebra.eigvals(Mtot\Matrix(Ktot))
+  V = LinearAlgebra.eigvecs(Mtot\Matrix(Ktot))  
   #@show real.(λ[1:nωₙ])
-  ωₙ = sqrt.(real.(λ))
-  return(ωₙ[1:nωₙ], V[:,1:nωₙ])
+  # @show sum(imag.(λ))
+  ωₙ = real.(sqrt.(Complex.(λ))) #damped frequency
+  α = -imag.( sqrt.(Complex.(λ)) ) # decay rate
+  return(ωₙ[1:nωₙ], α[1:nωₙ], V[:,1:nωₙ])
     
 end
 
 
-name::String = "data/sims_202508/mem_modes_wet_free"
+name::String = "data/sims_202508/mem_modes_wet_lrmm"
 order::Int = 1
 vtk_output::Bool = true
 filename = name*"/mem"
+
 mkpath(name)
 
 ρw = 1025 #kg/m3 water
@@ -64,6 +79,11 @@ Tᵨ = 0.1*g*H0*H0 #T/ρw
 # Excitation wave parameters
 ω = 1.0
 
+# Resonator parameters
+rM = 1.0e3 #Kg
+rK = 5.9e3 #N/m
+ζ = 0 # 0.05 #damping ratio
+rC = 2*ζ*sqrt(rK*rM) #N*s/m
 
 # Domain 
 nx = 300
@@ -176,6 +196,9 @@ dΓin = Measure(Γin,degree)
 dΓot = Measure(Γot,degree)
 dΛmb = Measure(Λmb,degree)
 
+# Dirac delta
+xr::Float64 = 30.0
+δ_p = DiracDelta(Γ, [Point(xr, 0.0)])
 
 # Normals
 @show nΛmb = get_normal_vector(Λmb)
@@ -200,38 +223,47 @@ U_Γκ = TrialFESpace(V_Γκ)
 # U_Γη = TrialFESpace(V_Γη, gη) #diri
 U_Γη = TrialFESpace(V_Γη)
 
+V_Γq = ConstantFESpace(Ω, vector_type=Vector{ComplexF64}, 
+  field_type=VectorValue{1,ComplexF64})
+U_Γq = TrialFESpace(V_Γq)
+î1 = VectorValue(1.0)
 
-# Weak form: Constant matrices
+
+# Weak form:  ω independent constant matrices
 ∇ₙ(ϕ) = ∇(ϕ)⋅VectorValue(0.0,1.0)
 m11(η,v) = ∫( mᵨ*v*η )dΓm
 k11(η,v) = ∫( v*g*η + Tᵨ*∇(v)⋅∇(η) )dΓm #+  
-            # ∫(- Tᵨ*v*∇(η)⋅nΛmb )dΛmb #diri
+            #∫(- Tᵨ*v*∇(η)⋅nΛmb )dΛmb #diri
 
 c12(ϕ,v) = ∫( v*ϕ )dΓm
-
 c21(η,w) = ∫( w*η )dΓm  
 
 k33(κ,u) = ∫( u*g*κ )dΓfs
 
+# Spring-mass-damper oscillator coupling terms
+m44(q, ξ) = rM * δ_p(q⋅ξ)
+
 l1(v) = ∫( 0*v )dΓm
 l2(w) = ∫( 0*w )dΩ
-l3(u) = ∫( 0*u )dΓfs 
+l3(u) = ∫( 0*u )dΓfs # + ∫( 0*u )dΓd1 + ∫( 0*u )dΓd2
+zero_vec = VectorValue(0.0+0im)
+l4(ξ) = ∫( zero_vec ⋅ ξ )dΩ
 println("[MSG] Done Weak form")
 
-# Global matrices: constant matrices
+# Global matrices
 M11 = get_matrix(AffineFEOperator( m11, l1, U_Γη, V_Γη ))
 K11 = get_matrix(AffineFEOperator( k11, l1, U_Γη, V_Γη ))
 C12 = get_matrix(AffineFEOperator( c12, l1, U_Ω, V_Γη ))
-
 C21 = get_matrix(AffineFEOperator( c21, l2, U_Γη, V_Ω ))
-
 K33 = get_matrix(AffineFEOperator( k33, l3, U_Γκ, V_Γκ ))
+M44 = get_matrix(AffineFEOperator(m44, l4, U_Γq, V_Γq))
 println("[MSG] Done Global matrices")
 
 #xp = range(xm₀, xm₁, size(V,2)+2)
 
-nωₙ = 10
+nωₙ = 10 #number of modes to compute
 da_ωₙ = zeros(Float64, 1, nωₙ)
+da_α = zeros(Float64, 1, nωₙ) #decay rate list
 @show ωₙ=zeros(Float64, 1, nωₙ) .+ ω
 da_V = []
 
@@ -242,27 +274,29 @@ da_V = []
 # push!(da_V, V[:,i])
 
 for i in 1:nωₙ
-  global da_ωₙ, da_V  
+  global da_ωₙ, da_α, da_V  
   global ωₙ, ω
-  local V
+  local V, α
   Δω = 1
   ω = ωₙ[i]
   while Δω > 1e-4
     global ω, ωₙ
-    ωₙ, V = run_freq(ω)
+    ωₙ, α, V = run_freq(ω)
     Δω = abs(ωₙ[i] - ω)
     if(i==1)
       #ω = 0.2 * ωₙ[i] + 0.8*ω
       ω = 0.0
       Δω = 0.0
+      α = 0.0
       V = V*0.0
     else
       ω = 0.8 * ωₙ[i] + 0.2*ω
     end
-    @show ωₙ
+    @show ωₙ, α
     @show i, ω, Δω
   end
   da_ωₙ[i] = ω
+  da_α[i]  = α[i] 
   push!(da_V, V[:,i])
 end
 
@@ -273,6 +307,7 @@ xp = range(xm₀, xm₁, length(da_V[1]))
 data = Dict(
   "xp" => xp,
   "ωₙ" => da_ωₙ,
+  "α" => da_α,
   "V" => da_V  
 )
 
