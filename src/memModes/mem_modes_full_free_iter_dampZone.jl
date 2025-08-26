@@ -16,16 +16,20 @@ function run_freq(ω)
   k = dispersionRelAng(H0, ω; msg=false)
   @show ω, k
 
+  # Damping
+  μ₂ᵢₙ(x) = μ₁ᵢₙ(x)*k
+  μ₂ₒᵤₜ(x) = μ₁ₒᵤₜ(x)*k
+  
   # Weak form: ω dependent
-  k22(ϕ,w) = ∫( ∇(w)⋅∇(ϕ) )dΩ +
-      ∫( -w * im * k * ϕ )dΓin + ∫( -w * im * k * ϕ )dΓot
+  c23(κ,w) = ∫( im*ω*w*κ )dΓfs + 
+      ∫( im*ω*w*κ - μ₂ᵢₙ*κ*w )dΓd1 + 
+      ∫( im*ω*w*κ - μ₂ₒᵤₜ*κ*w )dΓd2
 
-  c23(κ,w) = ∫( im*ω*w*κ )dΓfs 
-
-  c32(ϕ,u) = ∫( -im*ω*u*ϕ )dΓfs 
+  c32(ϕ,u) = ∫( -im*ω*u*ϕ )dΓfs + 
+      ∫( -im*ω*u*ϕ + μ₁ᵢₙ*∇ₙ(ϕ)*u )dΓd1 +
+      ∫( -im*ω*u*ϕ + μ₁ₒᵤₜ*∇ₙ(ϕ)*u )dΓd2 
   
   # Global matrices: ω dependent
-  K22 = get_matrix(AffineFEOperator( k22, l2, U_Ω, V_Ω ))
   C23 = get_matrix(AffineFEOperator( c23, l2, U_Γκ, V_Ω ))
   C32 = get_matrix(AffineFEOperator( c32, l3, U_Ω, V_Γκ ))
 
@@ -46,10 +50,11 @@ function run_freq(ω)
 end
 
 
-name::String = "data/sims_202508/mem_modes_wet_free"
+name::String = "data/sims_memmodes/mem_modes_dampZone"
 order::Int = 1
 vtk_output::Bool = true
 filename = name*"/mem"
+
 mkpath(name)
 
 ρw = 1025 #kg/m3 water
@@ -66,14 +71,17 @@ Tᵨ = 0.1*g*H0*H0 #T/ρw
 
 
 # Domain 
-nx = 300
+nx = 500
 ny = 20
 mesh_ry = 1.2 #Ratio for Geometric progression of eleSize
-LΩ = 6*H0 
-x₀ = 0.0
+Ld = 2*H0 #damping zone length
+LΩ = 6*H0 + 2*Ld
+x₀ = -Ld
 domain =  (x₀, x₀+LΩ, -H0, 0.0)
 partition = (nx, ny)
-xm₀ = x₀ + 2*H0
+xdᵢₙ = 0.0
+xdₒₜ = x₀ + LΩ - Ld
+xm₀ = xdᵢₙ + 2*H0
 xm₁ = xm₀ + Lm
 @show Lm
 @show LΩ
@@ -86,6 +94,28 @@ xm₁ = xm₀ + Lm
 #@show Ld*k/2/π
 #@show cosh.(k*H0*0.5)./cosh.(k*H0)
 println()
+
+
+# Numeric constants
+# h = LΩ / nx
+# γ = 1.0*order*(order-1)/h
+# βₕ = 0.5
+# αₕ = -im*ω/g * (1-βₕ)/βₕ
+# @show h
+# @show βₕ
+# @show αₕ
+# println()
+
+
+# Damping
+μ₀ = 2.5
+μ₁ᵢₙ(x) = μ₀*(1.0 - sin(π/2*(x[1]-x₀)/Ld))
+μ₁ₒᵤₜ(x) = μ₀*(1.0 - cos(π/2*(x[1]-xdₒₜ)/Ld))
+#μ₂ᵢₙ(x) = μ₁ᵢₙ(x)*k
+#μ₂ₒᵤₜ(x) = μ₁ₒᵤₜ(x)*k
+#ηd(x) = μ₂ᵢₙ(x)*ηᵢₙ(x)
+#∇ₙϕd(x) = μ₁ᵢₙ(x)*vzfsᵢₙ(x) #???
+
 
 
 # Mesh
@@ -126,7 +156,6 @@ add_tag_from_tags!(labels_Ω, "water", [9])       # assign the label "water" to 
 Ω = Interior(model) #same as Triangulation()
 Γ = Boundary(model,tags="surface") #same as BoundaryTriangulation()
 Γin = Boundary(model,tags="inlet")
-Γot = Boundary(model,tags="outlet")
 
 
 # Auxiliar functions
@@ -135,13 +164,27 @@ function is_mem(xs) # Check if an element is inside the beam1
   x = (1/n)*sum(xs)
   (xm₀ <= x[1] <= xm₁ ) * ( x[2] ≈ 0.0)
 end
-
+function is_damping1(xs) # Check if an element is inside the damping zone 1
+  n = length(xs)
+  x = (1/n)*sum(xs)
+  (x₀ <= x[1] <= xdᵢₙ ) * ( x[2] ≈ 0.0)
+end
+function is_damping2(xs) # Check if an element is inside the damping zone 2
+  n = length(xs)
+  x = (1/n)*sum(xs)
+  (xdₒₜ <= x[1] ) * ( x[2] ≈ 0.0)
+end
 
 # Masking and Beam Triangulation
 xΓ = get_cell_coordinates(Γ)
 Γm_to_Γ_mask = lazy_map(is_mem, xΓ)
+Γd1_to_Γ_mask = lazy_map(is_damping1, xΓ)
+Γd2_to_Γ_mask = lazy_map(is_damping2, xΓ)
 Γm = Triangulation(Γ, findall(Γm_to_Γ_mask))
-Γfs = Triangulation(Γ, findall(!, Γm_to_Γ_mask))
+Γd1 = Triangulation(Γ, findall(Γd1_to_Γ_mask))
+Γd2 = Triangulation(Γ, findall(Γd2_to_Γ_mask))
+Γfs = Triangulation(Γ, findall(!, Γm_to_Γ_mask .| 
+  Γd1_to_Γ_mask .| Γd2_to_Γ_mask))
 Γη = Triangulation(Γ, findall(Γm_to_Γ_mask))
 Γκ = Triangulation(Γ, findall(!,Γm_to_Γ_mask))
 
@@ -162,6 +205,8 @@ if vtk_output == true
   writevtk(Ω,filename*"_O")
   writevtk(Γ,filename*"_G")
   writevtk(Γm,filename*"_Gm")  
+  writevtk(Γd1,filename*"_Gd1")
+  writevtk(Γd2,filename*"_Gd2")
   writevtk(Γfs,filename*"_Gfs")
   writevtk(Λmb,filename*"_Lmb")  
 end
@@ -171,9 +216,10 @@ end
 degree = 2*order
 dΩ = Measure(Ω,degree)
 dΓm = Measure(Γm,degree)
+dΓd1 = Measure(Γd1,degree)
+dΓd2 = Measure(Γd2,degree)
 dΓfs = Measure(Γfs,degree)
 dΓin = Measure(Γin,degree)
-dΓot = Measure(Γot,degree)
 dΛmb = Measure(Λmb,degree)
 
 
@@ -211,11 +257,15 @@ c12(ϕ,v) = ∫( v*ϕ )dΓm
 
 c21(η,w) = ∫( w*η )dΓm  
 
-k33(κ,u) = ∫( u*g*κ )dΓfs
+k22(ϕ,w) = ∫( ∇(w)⋅∇(ϕ) )dΩ
+
+k33(κ,u) = ∫( u*g*κ )dΓfs  +
+    ∫( u*g*κ )dΓd1  +
+    ∫( u*g*κ )dΓd2  
 
 l1(v) = ∫( 0*v )dΓm
 l2(w) = ∫( 0*w )dΩ
-l3(u) = ∫( 0*u )dΓfs 
+l3(u) = ∫( 0*u )dΓfs + ∫( 0*u )dΓd1 + ∫( 0*u )dΓd2
 println("[MSG] Done Weak form")
 
 # Global matrices: constant matrices
@@ -224,6 +274,7 @@ K11 = get_matrix(AffineFEOperator( k11, l1, U_Γη, V_Γη ))
 C12 = get_matrix(AffineFEOperator( c12, l1, U_Ω, V_Γη ))
 
 C21 = get_matrix(AffineFEOperator( c21, l2, U_Γη, V_Ω ))
+K22 = get_matrix(AffineFEOperator( k22, l2, U_Ω, V_Ω ))
 
 K33 = get_matrix(AffineFEOperator( k33, l3, U_Γκ, V_Γκ ))
 println("[MSG] Done Global matrices")
@@ -235,7 +286,7 @@ da_ωₙ = zeros(Float64, 1, nωₙ)
 @show ωₙ=zeros(Float64, 1, nωₙ) .+ ω
 da_V = []
 
-# # For index=1 not looping coz ωₙ[1] = 0.0
+# For index=1 not looping coz it doesnt converge
 # i = 1
 # ωₙ, V = run_freq(ω)
 # da_ωₙ[i] = ωₙ[1]
@@ -252,10 +303,7 @@ for i in 1:nωₙ
     ωₙ, V = run_freq(ω)
     Δω = abs(ωₙ[i] - ω)
     if(i==1)
-      # ω = 0.2 * ωₙ[i] + 0.8*ω
-      ω = 0.0
-      Δω = 0.0
-      V = V*0.0
+      ω = 0.2 * ωₙ[i] + 0.8*ω
     else
       ω = 0.8 * ωₙ[i] + 0.2*ω
     end
@@ -266,7 +314,7 @@ for i in 1:nωₙ
   push!(da_V, V[:,i])
 end
 
-println("ωₙ = $(da_ωₙ)")
+println(da_ωₙ)
 
 xp = range(xm₀, xm₁, length(da_V[1]))
 
