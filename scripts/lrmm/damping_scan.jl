@@ -1,4 +1,4 @@
-module run_spatial_scan
+module run_damping_scan
 using DrWatson
 using Parameters
 using WaveSpec
