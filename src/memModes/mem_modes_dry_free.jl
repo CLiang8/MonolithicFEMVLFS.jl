@@ -218,11 +218,12 @@ V = LinearAlgebra.eigvecs(M11\Matrix(K11))
 ωₙ = ifelse.(ωₙ .< 0, 0, ωₙ)
 @show ωₙ[1:10]
 xp = range(xm₀, xm₁, size(V,2))
+da_V = [V[:, i] for i in 1:size(V, 2)]
 
 data = Dict(
   "xp" => xp,
   "ωₙ" => ωₙ,
-  "V" => V
+  "V" => da_V
 )
 
 wsave(filename*"_modesdata.jld2", data)

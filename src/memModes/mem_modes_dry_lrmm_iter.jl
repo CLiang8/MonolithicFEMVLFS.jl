@@ -68,8 +68,11 @@ mᵨ = 0.9 #mass per unit area of membrane / ρw
 Tᵨ = 0.1*g*H0*H0 #T/ρw
 
 # Resonator parameters
-rM = 1.0e3   # kg
-rK = 5.9e3   # N/m
+# rM = 1.0e3   # kg
+# rK = 5.9e3  # N/m
+rM = 1000
+rK = 2.4*2.4*rM  # N/m
+@show sqrt(rK/rM)  # rad/s
 ζ = 0.0     # damping ratio
 rC = 2 * ζ * sqrt(rK * rM)  # N·s/m
 
@@ -311,12 +314,12 @@ data = Dict(
   "q_modes" => q_all,
 )
 
-wsave(filename*"_modesdata.jld2", data)
+wsave("$(filename)_modesdata_m=$(rM).jld2", data)
 
 end
 
 
-
+#------------------------------plotting--------------------------------------------
 using Plots
 
 # === Load from Dict ===
