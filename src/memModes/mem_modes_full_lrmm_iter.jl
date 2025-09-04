@@ -81,7 +81,8 @@ Tᵨ = 0.1*g*H0*H0 #T/ρw
 
 # Resonator parameters
 rM = 1.0e3 #Kg
-rK = 5.9e3 #N/m
+# rK = 5.9e3 #N/m
+rK = 2.0*2.0*rM
 ζ = 0 # 0.05 #damping ratio
 rC = 2*ζ*sqrt(rK*rM) #N*s/m
 
@@ -261,10 +262,12 @@ println("[MSG] Done Global matrices")
 
 #xp = range(xm₀, xm₁, size(V,2)+2)
 
-nωₙ = 10 #number of modes to compute
+nωₙ = 6 #number of modes to compute
 da_ωₙ = zeros(Float64, 1, nωₙ)
 da_α = zeros(Float64, 1, nωₙ) #decay rate list
-@show ωₙ=zeros(Float64, 1, nωₙ) .+ ω
+# @show ωₙ=zeros(Float64, 1, nωₙ) .+ ω
+@show ωₙ= [0.6, 1.0, 1.4, 2.3, 3.3, 4.4 ]
+
 da_V = []
 
 # # For index=1 not looping coz ωₙ[1] = 0.0
@@ -282,13 +285,13 @@ for i in 1:nωₙ
   while Δω > 1e-4
     global ω, ωₙ
     ωₙ, α, V = run_freq(ω)
-    Δω = abs(ωₙ[i] - ω)
+    Δω = abs(ωₙ[i] - ω)/ω
     if(i==1)
-      #ω = 0.2 * ωₙ[i] + 0.8*ω
-      ω = 0.0
-      Δω = 0.0
-      α = 0.0
-      V = V*0.0
+      ω = 0.2 * ωₙ[i] + 0.8*ω
+      # ω = 0.0
+      # Δω = 0.0
+      # α = 0.0
+      # V = V*0.0
     else
       ω = 0.8 * ωₙ[i] + 0.2*ω
     end
@@ -300,7 +303,7 @@ for i in 1:nωₙ
   push!(da_V, V[:,i])
 end
 
-println(da_ωₙ)
+println("ωₙ = $(da_ωₙ)")
 
 xp = range(xm₀, xm₁, length(da_V[1]))
 

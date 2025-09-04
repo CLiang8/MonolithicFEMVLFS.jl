@@ -288,7 +288,7 @@ V = LinearAlgebra.eigvecs(Mtot\Matrix(Ktot))
 ωₙ = real.(sqrt.(Complex.(λ)))
 @show ind = findall(ωₙ.<7)
 @show ωₙ[ind]
-xp = range(xm₀, xm₁, size(V,2))
+xp = range(xm₀, xm₁, size(V,1))
 da_V = [V[:, i] for i in 1:size(V, 2)]
 
 @show typeof(da_V) # Check type of da_V elements
