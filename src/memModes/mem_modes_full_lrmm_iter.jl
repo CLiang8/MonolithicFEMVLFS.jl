@@ -23,10 +23,10 @@ function run_freq(ω)
   c32(ϕ,u) = ∫( -im*ω*u*ϕ )dΓfs 
   
   # Weak form ：ω dependent resonator
-  k11r(η, v) = - (im*ω*rC - rK) * δ_p(v * η)
-  k44(q, ξ) = (rK - im*ω*rC) * δ_p(q⋅ξ)
-  c14(q, v) = (im*ω*rC - rK) * δ_p(v * (q⋅î1))
-  c41(η, ξ) = -(-im*ω*rC + rK) * δ_p((ξ⋅î1) * η)
+  k11r(η, v) = - (im*ω*rC - rKᵨ) * δ_p(v * η)
+  k44(q, ξ) = (rKᵨ - im*ω*rC) * δ_p(q⋅ξ)
+  c14(q, v) = (im*ω*rC - rKᵨ) * δ_p(v * (q⋅î1))
+  c41(η, ξ) = -(-im*ω*rC + rKᵨ) * δ_p((ξ⋅î1) * η)
 
   # Global matrices: ω dependent
   K11r = get_matrix(AffineFEOperator(k11r, l1, U_Γη, V_Γη))
@@ -80,11 +80,11 @@ Tᵨ = 0.1*g*H0*H0 #T/ρw
 ω = 1.0
 
 # Resonator parameters
-rM = 1.0e3 #Kg
-# rK = 5.9e3 #N/m
-rK = 2.0*2.0*rM
+rMᵨ = 1.0 #Kg
+# rKᵨ = 5.9e3 #N/m
+rKᵨ = 2.4*2.4*rMᵨ
 ζ = 0 # 0.05 #damping ratio
-rC = 2*ζ*sqrt(rK*rM) #N*s/m
+rC = 2*ζ*sqrt(rKᵨ*rMᵨ) #N*s/m
 
 # Domain 
 nx = 300
@@ -242,7 +242,7 @@ c21(η,w) = ∫( w*η )dΓm
 k33(κ,u) = ∫( u*g*κ )dΓfs
 
 # Spring-mass-damper oscillator coupling terms
-m44(q, ξ) = rM * δ_p(q⋅ξ)
+m44(q, ξ) = rMᵨ * δ_p(q⋅ξ)
 
 l1(v) = ∫( 0*v )dΓm
 l2(w) = ∫( 0*w )dΩ

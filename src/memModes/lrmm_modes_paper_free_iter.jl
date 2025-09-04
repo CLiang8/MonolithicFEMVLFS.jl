@@ -27,10 +27,10 @@ function run_case(rMfac = 1000, rωfac = 2.4)
     c32(ϕ,u) = ∫( -im*ω*u*ϕ )dΓfs 
       
     # Weak form ：ω dependent resonator
-    k11r(η, v) = - (im*ω*rC - rK) * δ_p(v * η)
-    k44(q, ξ) = (rK - im*ω*rC) * δ_p(q⋅ξ)
-    c14(q, v) = (im*ω*rC - rK) * δ_p(v * (q⋅î1))
-    c41(η, ξ) = -(-im*ω*rC + rK) * δ_p((ξ⋅î1) * η)
+    k11r(η, v) = - (im*ω*rC - rKᵨ) * δ_p(v * η)
+    k44(q, ξ) = (rKᵨ - im*ω*rC) * δ_p(q⋅ξ)
+    c14(q, v) = (im*ω*rC - rKᵨ) * δ_p(v * (q⋅î1))
+    c41(η, ξ) = -(-im*ω*rC + rKᵨ) * δ_p((ξ⋅î1) * η)
 
     # Global matrices: ω dependent
     K11r = get_matrix(AffineFEOperator(k11r, l1, U_Γη, V_Γη))
@@ -78,7 +78,7 @@ function run_case(rMfac = 1000, rωfac = 2.4)
   # end
 
   mkpath(name)
-  @info "▶ Running case rM = $rMfac, rω = $rωfac"
+  @info "▶ Running case rMᵨ = $rMfac, rω = $rωfac"
 
   ρw = 1025 #kg/m3 water
   H0 = 10 #m #still-water depth
@@ -92,19 +92,19 @@ function run_case(rMfac = 1000, rωfac = 2.4)
   # Resonator parameters
   # rM = 1.0e3   # kg
   # rK = 5.9e3  # N/m
-  rM = rMfac
+  rMᵨ = rMfac/ρw
   rω = rωfac
-  rK = rω*rω*rM  # N/m
-  @show rK 
+  rKᵨ = rω*rω*rMᵨ  # N/m
+  @show rKᵨ 
   ζ = 0.0     # damping ratio
-  rC = 2 * ζ * sqrt(rK * rM)  # N·s/m
-  mass_ratio = rM / (ρw*Lm*mᵨ)
+  rC = 2 * ζ * sqrt(rKᵨ * rMᵨ)  # N·s/m
+  mass_ratio = rMᵨ / (ρw*Lm*mᵨ)
 
   # Excitation wave parameters
   ω = 1.0
 
   # Domain 
-  nx = 240
+  nx = 120
   ny = 10
   mesh_ry = 1.2 #Ratio for Geometric progression of eleSize
   LΩ = 6*H0 
@@ -259,7 +259,7 @@ function run_case(rMfac = 1000, rωfac = 2.4)
   k33(κ,u) = ∫( u*g*κ )dΓfs
 
   # Spring-mass-damper oscillator coupling terms
-  m44(q, ξ) = rM * δ_p(q⋅ξ)
+  m44(q, ξ) = rMᵨ * δ_p(q⋅ξ)
 
   l1(v) = ∫( 0*v )dΓm
   l2(w) = ∫( 0*w )dΩ
@@ -315,22 +315,22 @@ function run_case(rMfac = 1000, rωfac = 2.4)
       ωᵣ = ωₙ[i]     
       # ωᵣ = real(sqrt(λ[i]))
 
-      if(i==1)
-        #ω = 0.2 * ωₙ[i] + 0.8*ω
-        ω = 0.0
-        Δω = 0.0
-        V = V*0.0
-      elseif(i==4)
-        ω = 0.4 * ωᵣ + 0.6*ωₒ
-        Δω = abs(ω - ωₒ)/ωₒ
+      # if(i==1)
+      #   #ω = 0.2 * ωₙ[i] + 0.8*ω
+      #   ω = 0.0
+      #   Δω = 0.0
+      #   V = V*0.0
+      # elseif(i==4)
+      #   ω = 0.4 * ωᵣ + 0.6*ωₒ
+      #   Δω = abs(ω - ωₒ)/ωₒ
       # else
       #   ω = 0.5 * ωᵣ + 0.5*ωₒ
       #   Δω = abs(ω - ωₒ)/ωₒ
       # end      
-      else
+    
       ω = 0.8 * ωᵣ + 0.2*ωₒ
       Δω = abs(ωᵣ - ωₒ)/ωₒ
-      end
+      
       lIter += 1
       @show ωₙ
       @show i, ω, Δω, lIter

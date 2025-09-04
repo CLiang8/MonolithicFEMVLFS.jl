@@ -17,8 +17,8 @@ function run_freq(ω)
   @show ω, k
 
   # Weak form: ω dependent
-  c14(q, v) = (im*ω*rC - rK) * δ_p(v * (q⋅î1))
-  c41(η, ξ) = -(-im*ω*rC + rK) * δ_p((ξ⋅î1) * η)
+  c14(q, v) = (im*ω*rC - rkᵨ) * δ_p(v * (q⋅î1))
+  c41(η, ξ) = -(-im*ω*rC + rkᵨ) * δ_p((ξ⋅î1) * η)
 
   # Global matrices: ω dependent
   C14 = get_matrix(AffineFEOperator(c14, l1, U_Γq, V_Γη))
@@ -68,13 +68,13 @@ mᵨ = 0.9 #mass per unit area of membrane / ρw
 Tᵨ = 0.1*g*H0*H0 #T/ρw
 
 # Resonator parameters
-# rM = 1.0e3   # kg
+rM = 1000   # kg
 # rK = 5.9e3  # N/m
-rM = 1000
-rK = 2.4*2.4*rM  # N/m
-@show sqrt(rK/rM)  # rad/s
+rMᵨ = rM/ρw
+rkᵨ = 2.4*2.4*rMᵨ  # N/m
+@show sqrt(rkᵨ/rMᵨ)  # rad/s
 ζ = 0.0     # damping ratio
-rC = 2 * ζ * sqrt(rK * rM)  # N·s/m
+rC = 2 * ζ * sqrt(rkᵨ * rMᵨ)  # N·s/m
 
 # Excitation wave parameters
 ω = 1.0
@@ -231,9 +231,9 @@ k11(η,v) = ∫( Tᵨ*∇(v)⋅∇(η) )dΓm #+
             #∫(- Tᵨ*v*∇(η)⋅nΛmb )dΛmb #diri
 
 # Spring-mass-damper oscillator coupling terms
-k11r(η, v) = - (im*ω*rC - rK) * δ_p(v * η)
-m44(q, ξ) = rM * δ_p(q⋅ξ)
-k44(q, ξ) = (rK - im*ω*rC) * δ_p(q⋅ξ)
+k11r(η, v) = - (im*ω*rC - rkᵨ) * δ_p(v * η)
+m44(q, ξ) = rMᵨ * δ_p(q⋅ξ)
+k44(q, ξ) = (rkᵨ - im*ω*rC) * δ_p(q⋅ξ)
 
 l1(v) = ∫( 0*v )dΓm
 zero_vec = VectorValue(0.0+0im)
@@ -320,33 +320,40 @@ end
 
 
 #------------------------------plotting--------------------------------------------
-using Plots
+using Plots, JLD2
+
+rM = 1000.0  # 根据你的绘图脚本中的 rM 值
+base_dir = "data/sims_memmodes/mem_modes_dry_lrmm"
+filename = "mem"
+path = "$(base_dir)/$(filename)_modesdata_m=$(rM).jld2"
 
 # === Load from Dict ===
+data = load(path)
 xp = data["xp"]
 ωₙ = data["ωₙ"]
 η_all = data["V"]
 q_all = data["q_modes"]
 
-N = 9  # 模态总数（通常为你保存的 nωₙ）
+N = 6  # 模态总数（通常为你保存的 nωₙ）
 
 # === 1. 多模态 η(x) subplot 绘图 ===
 plt1 = plot(layout = (N, 1), size = (800, 250 * N), legend = false)
 
 for n in 1:N
-    ηn = real.(η_all[n])  # 可换成 abs.() 查看振幅模式
+    ηn = real.(η_all[n])./ maximum(abs.(η_all[n]))  # 可换成 abs.() 查看振幅模式
     ω_str = "ω = $(round(ωₙ[n], digits=3)) rad/s"
     plot!(
         plt1[n], xp, ηn,
         lw = 2,
         xlabel = "x (m)",
         ylabel = "η(x)",
+        ylims = (-1.1, 1.1),
         title = "Mode $n — $ω_str",
         grid = true,
     )
 end
 
-savefig(plt1, filename * "_mem_modes_subplot.png")
+savefig(plt1, filename * "_modes_subplot.png")
 display(plt1)
 
 # === 2. q 的 modal participation 柱状图 ===

@@ -36,6 +36,10 @@ rK = 5.9e3 #N/m
 ζ = 0 # 0.05 #damping ratio
 rC = 2*ζ*sqrt(rK*rM) #N*s/m
 
+# WRONG:use rM and rK directly in the weak form matrices
+rMᵨ = rM/ρw
+rKᵨ = rK/ρw
+rCᵨ = 2*ζ*sqrt(rKᵨ*rMᵨ)
 
 # Domain 
 nx = 450
@@ -236,13 +240,13 @@ k33(κ,u) = ∫( u*g*κ )dΓfs  +
     ∫( u*g*κ )dΓd2  
 
 # Spring-mass-damper oscillator coupling terms
-k11r(η, v) = - (im*ω*rC - rK) * δ_p(v * η)
+k11r(η, v) = - (im*ω*rCᵨ - rKᵨ) * δ_p(v * η)
 
-m44(q, ξ) = rM * δ_p(q⋅ξ)
-k44(q, ξ) = (rK - im*ω*rC) * δ_p(q⋅ξ)
+m44(q, ξ) = rMᵨ * δ_p(q⋅ξ)
+k44(q, ξ) = (rKᵨ - im*ω*rCᵨ) * δ_p(q⋅ξ)
 
-c14(q, v) = (im*ω*rC - rK) * δ_p(v * (q⋅î1))
-c41(η, ξ) = -(-im*ω*rC + rK) * δ_p((ξ⋅î1) * η)
+c14(q, v) = (im*ω*rCᵨ - rKᵨ) * δ_p(v * (q⋅î1))
+c41(η, ξ) = -(-im*ω*rCᵨ + rKᵨ) * δ_p((ξ⋅î1) * η)
 
 l1(v) = ∫( 0*v )dΓm
 l2(w) = ∫( 0*w )dΩ
