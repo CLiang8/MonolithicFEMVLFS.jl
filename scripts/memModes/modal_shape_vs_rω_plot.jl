@@ -4,7 +4,8 @@ using JLD2, Plots, LaTeXStrings, Printf
 
 # === 用户参数设置 ===
 rM = 1000.0
-rω_list = [1.5, 2.0, 2.5, 3.0]  # 用户自定义
+rω_list = [1.01, 3.0, 5.0] 
+# rω_list = [2.4]
 n_modes = 6
 Lm = 20.0
 base_dir = "data/sims_memmodes/lrmm_modes_wet/"
@@ -35,9 +36,9 @@ for rω in rω_list
         xp = (data["xp"] .-20) ./ 10  # 单位化横坐标
         shape = real.(V) ./ maximum(abs.(V))  # 实部归一化
         push!(modal_data[i]["shapes"], shape)
+        modal_data[i]["xp"] = xp 
     end
-    modal_data[i]["xp"] = xp 
-    push!(labels, @sprintf("rω = %.2f", rω))
+    push!(labels, @sprintf("rω = %.1f", rω))
 end
 
 # === 绘图 ===

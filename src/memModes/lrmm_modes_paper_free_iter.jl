@@ -356,14 +356,17 @@ function run_case(rMfac = 1000, rωfac = 2.4)
 end
 
 
-# rMfac = [50, 500, 1000 ]
+rMfac = [100, 500, 3000]
+rωfac = [1.01, 1.50, 2.00, 2.50, 3.00, 3.50, 4.00, 4.50, 5.00, 5.50 ]
+
+# rMfac = 1000
 # rωfac = [1.01, 1.50, 2.00, 2.50, 3.00, 3.50, 4.00, 4.50, 5.00, 5.50 ]
 
-# rMfac = [1000 ]
+# rMfac = 1000
 # rωfac = 1.5:0.1:2.5
 
-rMfac = [1000 ]
-rωfac = 2.40
+# rMfac = 1000
+# rωfac = 2.40
 
 for irMfac in rMfac
   for irωfac in rωfac

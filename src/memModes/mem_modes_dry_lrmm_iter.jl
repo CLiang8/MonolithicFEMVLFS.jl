@@ -68,7 +68,7 @@ mᵨ = 0.9 #mass per unit area of membrane / ρw
 Tᵨ = 0.1*g*H0*H0 #T/ρw
 
 # Resonator parameters
-rM = 1000   # kg
+rM = 3000   # kg
 # rK = 5.9e3  # N/m
 rMᵨ = rM/ρw
 rkᵨ = 2.4*2.4*rMᵨ  # N/m

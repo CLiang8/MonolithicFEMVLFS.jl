@@ -4,7 +4,7 @@ using JLD2, Plots, LaTeXStrings, Printf
 
 # === 用户参数设置 ===
 rω = 2.0
-rM_list = [50.0, 500.0, 1000.0]  # ✅ 改为循环 rM
+rM_list = [100, 500.0, 1000.0, 3000]  # ✅ 改为循环 rM
 n_modes = 6
 Lm = 20.0
 base_dir = "data/sims_memmodes/lrmm_modes_wet/"
