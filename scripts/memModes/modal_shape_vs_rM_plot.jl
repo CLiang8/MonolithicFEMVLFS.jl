@@ -3,9 +3,9 @@ module plot_modes_vs_rM
 using JLD2, Plots, LaTeXStrings, Printf
 
 # === 用户参数设置 ===
-rω = 2.0
-rM_list = [100, 500.0, 1000.0, 3000]  # ✅ 改为循环 rM
-n_modes = 6
+rω = 2.40
+rM_list = [0.3, 0.5, 1.0]  # ✅ 改为循环 rM
+n_modes = 7
 Lm = 20.0
 base_dir = "data/sims_memmodes/lrmm_modes_wet/"
 output_dir = joinpath(base_dir, "plot_rM_sweep")
@@ -37,7 +37,7 @@ for rM in rM_list
     end
 
     modal_data[1]["xp"] = xp
-    push!(labels, @sprintf("rM = %.0f", rM))
+    push!(labels, @sprintf("rM = %.2f", rM))
 end
 
 # === 绘图 ===
