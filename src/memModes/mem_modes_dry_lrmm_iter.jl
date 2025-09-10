@@ -68,7 +68,7 @@ mᵨ = 0.9 #mass per unit area of membrane / ρw
 Tᵨ = 0.1*g*H0*H0 #T/ρw
 
 # Resonator parameters
-rM = 3000   # kg
+rM = 1000   # kg
 # rK = 5.9e3  # N/m
 rMᵨ = rM/ρw
 rkᵨ = 2.4*2.4*rMᵨ  # N/m
@@ -314,7 +314,8 @@ data = Dict(
   "q_modes" => q_all,
 )
 
-wsave("$(filename)_modesdata_m=$(rM).jld2", data)
+# wsave("$(filename)_modesdata_m=$(rM).jld2", data)
+wsave(filename * "_modesdata_lrmm.jld2", data)
 
 end
 

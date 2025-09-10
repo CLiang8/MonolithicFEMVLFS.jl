@@ -1,4 +1,4 @@
-module Membrane_modes
+module Membrane_modes_lrmm
 
 using Revise
 using Gridap
@@ -12,7 +12,7 @@ using DataFrames
 using Printf
 
 
-function run_case(rMfac = 1000, rωfac = 2.4)
+function run_case(rMfac = 1, rωfac = 2.4)
 
   function run_freq(ω)
 
@@ -46,22 +46,40 @@ function run_case(rMfac = 1000, rωfac = 2.4)
     Mhat = C12 * (Mϕ \ C21)
     Mtot = M11 + Mhat
 
-    # Spring-mass coupling
-    Rosc = -C14 * ((-ω^2 * M44 + K44) \ C41)
-    Ktot = K11 + K11r + Rosc
-
+    # # Spring-mass coupling
+    # Rosc = -C14 * ((-ω^2 * M44 + K44) \ C41)
+    # Ktot = K11 + K11r + Rosc
+    # Meff = Mtot - (1/ω^2) * Rosc
     # tock()
 
     # Eigen values
-    λ = LinearAlgebra.eigvals(Mtot\Matrix(Ktot))
-    V = LinearAlgebra.eigvecs(Mtot\Matrix(Ktot))  
-    #@show real.(λ[1:nωₙ])
+    # λ = LinearAlgebra.eigvals(Mtot\Matrix(Ktot))
+    # V = LinearAlgebra.eigvecs(Mtot\Matrix(Ktot))
+    
+    A = [K11 + K11r     C14;
+         C41            K44] 
+    B = [Mtot          0*C14;
+         0*C41          M44]
+
+    λ, V = eigen(Matrix(B) \ Matrix(A))
     # @show sum(imag.(λ))
+
+    # meff = diag(transpose(V[1:end-1, 1:nωₙ]) * Mtot * V[1:end-1, 1:nωₙ])
+    # meff = diag((V[1:end-1, 1:nωₙ])' * Mtot * V[1:end-1, 1:nωₙ])
+
+    # H transpose
+    Mherm = real((Mtot + Mtot')/2)
+    meff = diag((V[1:end-1, 1:nωₙ])' * Mherm * V[1:end-1, 1:nωₙ])
+    
+    # couple with K44
+    # meff = diag((V[1:end-1, 1:nωₙ])' * Meff * V[1:end-1, 1:nωₙ])
+
     ωₙ = real.(sqrt.(Complex.(λ))) #damped frequency
     # α = -imag.( sqrt.(Complex.(λ)) ) # decay rate
-    return(ωₙ[1:nωₙ], V[:,1:nωₙ])
+
+    # return(ωₙ[1:nωₙ], V[:,1:nωₙ])
     # return(ωₙ[1:nωₙ], α[1:nωₙ], V[:,1:nωₙ])
-        
+    return(ωₙ[1:nωₙ], V[:,1:nωₙ], meff)    
   end
   
 
@@ -72,10 +90,10 @@ function run_case(rMfac = 1000, rωfac = 2.4)
   vtk_output::Bool = true
   filename = name*"/mem"
 
-  # # 跳过已存在的文件夹的计算
-  # if( isdir(name) )
-  #   return
-  # end
+  # 跳过已存在的文件夹的计算
+  if( isdir(name) )
+    return
+  end
 
   mkpath(name)
   @info "▶ Running case rMᵨ = $rMfac, rω = $rωfac"
@@ -92,7 +110,7 @@ function run_case(rMfac = 1000, rωfac = 2.4)
   # Resonator parameters
   # rM = 1.0e3   # kg
   # rK = 5.9e3  # N/m
-  rMᵨ = rMfac/ρw
+  rMᵨ = rMfac
   rω = rωfac
   rKᵨ = rω*rω*rMᵨ  # N/m
   @show rKᵨ 
@@ -278,25 +296,20 @@ function run_case(rMfac = 1000, rωfac = 2.4)
   println("[MSG] Done Global matrices")
   println(K11 == transpose(K11))
 
-  #xp = range(xm₀, xm₁, size(V,2)+2)
-
+  # Iterative algorithm
   maxIter = 20
-  nωₙ = 6
+  nωₙ = 7
   da_ωₙ = zeros(Float64, 1, nωₙ)
   @show ωₙ=zeros(Float64, 1, nωₙ) .+ ω
-  # ωₙ = fill(ω, nωₙ)
+  println("[MSG] Starting iterative solution for wet natural frequencies")
   da_V = []
+  da_meff=[]
 
-  # # For index=1 not looping coz ωₙ[1] = 0.0
-  # i = 1
-  # ωₙ, V = run_freq(ω)
-  # da_ωₙ[i] = ωₙ[1]
-  # push!(da_V, V[:,i])
 
   for i in 1:nωₙ
     # global da_ωₙ, da_V  
     # global ωₙ, ω
-    local V, lIter
+    local V, lIter, meff
     lIter = 0    
     Δω = 1
     # ω = ωₙ[i]
@@ -305,12 +318,7 @@ function run_case(rMfac = 1000, rωfac = 2.4)
     while ((Δω > 1e-3) && (lIter < maxIter))
       # global ω, ωₙ
       
-      # # Wrong
-      # rλ, V = run_freq(ω)
-      # ωₒ = ω      
-      # ωᵣ = sqrt(rλ[i])
-
-      ωₙ, V = run_freq(ω)
+      ωₙ, V, meff = run_freq(ω)
       ωₒ = ω
       ωᵣ = ωₙ[i]     
       # ωᵣ = real(sqrt(λ[i]))
@@ -340,32 +348,48 @@ function run_case(rMfac = 1000, rωfac = 2.4)
 
     da_ωₙ[i] = ω
     push!(da_V, V[:,i])
+    push!(da_meff, meff[i])
   end
 
   println(da_ωₙ)
 
-  xp = range(xm₀, xm₁, length(da_V[1]))
+  # xp = range(xm₀, xm₁, length(da_V[1]))
+
+  # data = Dict(
+  #   "xp" => xp,
+  #   "ωₙ" => da_ωₙ,
+  #   "V" => da_V  
+  # )
+
+  # solution 2 data saving
+  nη = size(M11, 1)
+  nq = size(M44, 1)   
+  xp = range(xm₀, xm₁, nη)
+  η_all = [v[1:nη] for v in da_V]
+  q_all = [v[nη+1:end] for v in da_V]
 
   data = Dict(
-    "xp" => xp,
-    "ωₙ" => da_ωₙ,
-    "V" => da_V  
+  "xp" => xp,
+  "ωₙ" => da_ωₙ,
+  "V" => η_all,
+  "q_modes" => q_all,
+  "meff" => da_meff,
   )
 
   wsave(filename*"_modesdata.jld2", data)
 end
 
 
-rMfac = [100, 500, 3000]
-rωfac = [1.01, 1.50, 2.00, 2.50, 3.00, 3.50, 4.00, 4.50, 5.00, 5.50 ]
-
-# rMfac = 1000
+# rMfac = [100, 500, 3000]
 # rωfac = [1.01, 1.50, 2.00, 2.50, 3.00, 3.50, 4.00, 4.50, 5.00, 5.50 ]
 
 # rMfac = 1000
-# rωfac = 1.5:0.1:2.5
+# rωfac = [1.01, 1.50, 2.00, 2.50, 3.00, 3.50, 4.00, 4.50, 5.00 ]
 
-# rMfac = 1000
+rMfac = 0.1:0.1:1.0
+rωfac = 2.4
+
+# rMfac = 0.1:0.1:1.0
 # rωfac = 2.40
 
 for irMfac in rMfac

@@ -9,6 +9,7 @@ using .Constants
 using LinearAlgebra
 using TickTock
 using DataFrames
+using Printf
 
 
 function run_freq(ω)
@@ -48,19 +49,29 @@ function run_freq(ω)
 
   tock()
 
-  # Eigen values
-  λ = LinearAlgebra.eigvals(Mtot\Matrix(Ktot))
-  V = LinearAlgebra.eigvecs(Mtot\Matrix(Ktot))  
-  #@show real.(λ[1:nωₙ])
-  # @show sum(imag.(λ))
-  ωₙ = real.(sqrt.(Complex.(λ))) #damped frequency
-  α = -imag.( sqrt.(Complex.(λ)) ) # decay rate
-  return(ωₙ[1:nωₙ], α[1:nωₙ], V[:,1:nωₙ])
-    
+  # # Eigen values
+  # λ = LinearAlgebra.eigvals(Mtot\Matrix(Ktot))
+  # V = LinearAlgebra.eigvecs(Mtot\Matrix(Ktot))  
+  # #@show real.(λ[1:nωₙ])
+  # # @show sum(imag.(λ))
+  # ωₙ = real.(sqrt.(Complex.(λ))) #damped frequency
+  # α = -imag.( sqrt.(Complex.(λ)) ) # decay rate
+  # return(ωₙ[1:nωₙ], α[1:nωₙ], V[:,1:nωₙ])
+
+  A = [K11 + K11r     C14;
+       C41            K44] 
+  B = [Mtot          0*C14;
+       0*C41          M44]
+
+  λ, V = eigen(Matrix(B) \ Matrix(A))
+  ωₙ = real.(sqrt.(Complex.(λ)))
+  return(ωₙ[1:nωₙ], V[:,1:nωₙ])
+      
 end
 
+rω = 2.4
 
-name::String = "data/sims_202508/mem_modes_wet_lrmm"
+name::String = @sprintf("data/sims_202508/mem_modes_wet_lrmm_rω%.2f", rω)
 order::Int = 1
 vtk_output::Bool = true
 filename = name*"/mem"
@@ -82,7 +93,7 @@ Tᵨ = 0.1*g*H0*H0 #T/ρw
 # Resonator parameters
 rMᵨ = 1.0 #Kg
 # rKᵨ = 5.9e3 #N/m
-rKᵨ = 2.4*2.4*rMᵨ
+rKᵨ = rω*rω*rMᵨ
 ζ = 0 # 0.05 #damping ratio
 rC = 2*ζ*sqrt(rKᵨ*rMᵨ) #N*s/m
 
@@ -262,7 +273,7 @@ println("[MSG] Done Global matrices")
 
 #xp = range(xm₀, xm₁, size(V,2)+2)
 
-nωₙ = 6 #number of modes to compute
+nωₙ = 7 #number of modes to compute
 da_ωₙ = zeros(Float64, 1, nωₙ)
 da_α = zeros(Float64, 1, nωₙ) #decay rate list
 # @show ωₙ=zeros(Float64, 1, nωₙ) .+ ω
@@ -282,36 +293,51 @@ for i in 1:nωₙ
   local V, α
   Δω = 1
   ω = ωₙ[i]
-  while Δω > 1e-4
+  while Δω > 1e-3
     global ω, ωₙ
-    ωₙ, α, V = run_freq(ω)
+    ωₙ, V = run_freq(ω)
     Δω = abs(ωₙ[i] - ω)/ω
-    if(i==1)
-      ω = 0.2 * ωₙ[i] + 0.8*ω
-      # ω = 0.0
-      # Δω = 0.0
-      # α = 0.0
-      # V = V*0.0
-    else
-      ω = 0.8 * ωₙ[i] + 0.2*ω
-    end
-    @show ωₙ, α
+    # if(i==1)
+    #   ω = 0.2 * ωₙ[i] + 0.8*ω
+    #   # ω = 0.0
+    #   # Δω = 0.0
+    #   # α = 0.0
+    #   # V = V*0.0
+    # else
+    #   ω = 0.8 * ωₙ[i] + 0.2*ω
+    # end
+    ω = 0.8 * ωₙ[i] + 0.2*ω
+    @show ωₙ #, α
     @show i, ω, Δω
   end
   da_ωₙ[i] = ω
-  da_α[i]  = α[i] 
+  # da_α[i]  = α[i] 
   push!(da_V, V[:,i])
 end
 
 println("ωₙ = $(da_ωₙ)")
 
-xp = range(xm₀, xm₁, length(da_V[1]))
+# xp = range(xm₀, xm₁, length(da_V[1]))
+
+# data = Dict(
+#   "xp" => xp,
+#   "ωₙ" => da_ωₙ,
+#   # "α" => da_α,
+#   "V" => da_V  
+# )
+
+# solution 2 data saving
+nη = size(M11, 1)
+nq = size(M44, 1)   
+xp = range(xm₀, xm₁, nη)
+η_all = [v[1:nη] for v in da_V]
+q_all = [v[nη+1:end] for v in da_V]
 
 data = Dict(
   "xp" => xp,
   "ωₙ" => da_ωₙ,
-  "α" => da_α,
-  "V" => da_V  
+  "V" => η_all,
+  "q_modes" => q_all,
 )
 
 wsave(filename*"_modesdata.jld2", data)

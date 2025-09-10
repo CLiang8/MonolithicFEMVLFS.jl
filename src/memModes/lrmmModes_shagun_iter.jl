@@ -367,9 +367,9 @@ Memb_params
 
 Parameters for the VIV.jl module.
 """
-@with_kw struct MembLR_params
+@with_kw mutable struct MembLR_params
 
-  resDir::String = "data/sims_202508/mem_modes_lrmm_SG/"
+  resDir::String = "data/sims_202508/mem_modes_lrmm_SG/trial/"
   fileName::String = "mem"
 
   order::Int = 2
@@ -412,9 +412,42 @@ end
 
 
 # ----------------------Start Execution----------------------
+using MonolithicFEMVLFS.Resonator
+using Printf
+using Gridap
 
 # 创建参数实例
 params = Membrane_modes.MembLR_params()
 
-# 调用 run_case 函数
+# trial run
 Membrane_modes.run_case(params)
+
+# rω_list = 1.0:0.5:2.0
+rω_list = [1.01, 1.5]  
+rM_list = [1.0] 
+
+for rM in rM_list
+    for rω in rω_list
+        println("📊 Running modal analysis for rM = $rM, rω = $rω ...")
+        
+        # 创建新的 Single 实例并更新 resonator 参数
+        params.rS_by_ρw = Resonator.Single(
+            rM,                # 更新质量
+            rω^2 * rM,         # 根据 rω 更新弹簧刚度
+            0,                 # 保持阻尼不变
+            Point(30, 0.0)     # 保持位置不变
+        )
+        
+        # 更新输出目录以区分不同的 rM 和 rω
+        params.resDir = @sprintf("data/sims_202508/mem_modes_lrmm_SG/rω%.2f_rmass%.2f", rω, rM)
+        params.fileName = "mem"
+        
+        # 创建输出目录
+        mkpath(params.resDir)
+        
+        # 运行 modal analysis
+        Membrane_modes.run_case(params)
+        
+        println("✅ Finished modal analysis for rM = $rM, rω = $rω")
+    end
+end
