@@ -501,7 +501,7 @@ Parameters for the VIV.jl module.
 end
 
 @with_kw struct Memb_params
-  name::String = "data/sims_mem_freq_lrmm/Coefficients"
+  name::String = "data/sims_mem_freq_lrmm/Memcase"
   order::Int = 2
   vtk_output::Bool = true
 
@@ -516,7 +516,7 @@ end
   # η₀ = η₀[2:end]
   # ω = [2*π/2.53079486745378, 2*π/2.0]
   # η₀ = [0.25, 0.25]
-  ω = 0.7:0.05:5
+  ω = 1.0:0.05:5
   T = 2*π./ω
   η₀ = 0.10*ones(length(ω))
   α = randomPhase(ω; seed=100)
@@ -530,9 +530,9 @@ end
   τ = 0.0#damping coeff
 
   #oscillator parameters
-  rM = 1.0e3 #Kg
-  rω = 4.642 #rad/s
-  rK = rM*rω^2 #N/m
+  rM = 0.05 #Kg
+  rω = 0.05 #rad/s
+  rK = 0.05 #N/m #N/m
   ζ = 0 # 0.05 #damping ratio
   rC = 2*ζ*sqrt(rK*rM) #N*s/m
 
