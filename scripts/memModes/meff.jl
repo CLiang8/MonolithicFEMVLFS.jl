@@ -4,41 +4,46 @@ using JLD2
 using Printf
 using Plots
 
-# 指定要读取的参数
-rM = 0.1
-rω = 2.40
+# ==== 设置参数组 ====
+rM_list = [0.1, 0.3, 0.5]
+rω_list = [1.5, 2.4, 3.5, 4.5]
+# rM_list = [0.1]
+# rω_list = [2.4]
 
-# 构造路径和文件名
-caseName = "rω"* @sprintf("%0.2f", rω) *"_rmass"* @sprintf("%0.2f", rM)
-name = "data/sims_memmodes/lrmm_modes_wet/lrmm_modes_" * caseName
-filename = name * "/mem_modesdata.jld2"
+# 输出目录
 output_dir = "data/sims_memmodes/lrmm_modes_wet/plot_meff"
-
 mkpath(output_dir)
 
-# 加载文件并提取 meff
-println("Loading file: ", filename)
-data = load(filename)
 
-# 提取和打印 meff
-meff = real.(data["meff"])
-println("\nEffective mass (meff) values:")
-println(meff)
+# ==== 双层循环遍历所有组合 ====
+for rM in rM_list
+    for rω in rω_list
 
+        # 构造文件名
+        caseName = "rω"* @sprintf("%0.2f", rω) *"_rmass"* @sprintf("%0.2f", rM)
+        name = "data/sims_memmodes/lrmm_modes_wet/lrmm_modes_" * caseName
+        filename = name * "/mem_modesdata.jld2"
 
-plot(meff, seriestype=:scatter, 
-    xlabel="Mode number", 
-    ylabel="Effective mass", 
-    title="Wet mode effective mass", 
-    ylims = (-0.25, 1.85),
-    legend= true
+        # println("✅ Loading: ", filename)
+        data = load(filename)
+        meff = real.(data["meff"])
 
-)
+        plt = plot(
+            meff, seriestype = :scatter,
+            xlabel = "Mode number",
+            ylabel = "Effective mass",
+            title = "Wet mode effective mass",
+            ylims = (-0.25, 1.85),
+            label = @sprintf("rω = %.2f, rM = %.2f", rω, rM),
+            legend = :topright,
+            )   
 
-savefile = joinpath(output_dir, @sprintf("meff_rω%.2f_rM%.2f.png", rω, rM))
-savefig(savefile)
-println("✅ Saved: $savefile")
+        savefile = joinpath(output_dir, @sprintf("meff_rω%.2f_rM%.2f.png", rω, rM))
+        savefig(savefile)
+        println("✅ Saved: $savefile")
 
+    end
+end
 
 
 end
