@@ -207,3 +207,86 @@ plot_energy_map(Ka_mat, ω_ref, ζ_list, title=L"K_a", savepath=joinpath(out_dir
 plot_energy_map(Err_mat, ω_ref, ζ_list, title="Energy Balance Error", savepath=joinpath(out_dir, "Error_map.png"))
 
 end # module plot_damping_scan
+
+
+module plot_damping_scan_2D
+using JLD2, Plots, DataFrames, LaTeXStrings
+
+# parameters
+resDir = "data/sims_mem_freq_lrmm/Damping_scan"
+ζ_list = [0.0, 0.02, 0.05, 0.1, 0.5]
+Kr_list, Kt_list, Ka_list, Err_list = [], [], [], []
+
+# extract ω from the first file
+first_file = joinpath(resDir, "ζ_$(round(ζ_list[1]; digits=3))", "mem_data.jld2")
+ω_ref = load(first_file)["ω"]
+
+# load data for each ζ
+for ζ in ζ_list
+    folder = joinpath(resDir, "ζ_$(round(ζ; digits=3))")
+    file = joinpath(folder, "mem_data.jld2")
+    if !isfile(file)
+        @warn "Missing data at $folder"
+        continue
+    end
+    data = load(file)
+    ω = data["ω"]
+    prbPow = Matrix(data["prbPow"])
+
+    Pin = prbPow[:, 1]
+    Prf = prbPow[:, 2]
+    Ptr = prbPow[:, 3]
+    Pabs = prbPow[:, 4]
+
+    Kr = Prf ./ Pin
+    Kt = Ptr ./ Pin
+    Ka = Pabs ./ Pin
+    Err = 1 .- (Kr .+ Kt .+ Ka)
+
+    push!(Kr_list, Kr)
+    push!(Kt_list, Kt)
+    push!(Ka_list, Ka)
+    push!(Err_list, Err)
+end
+
+# ----------------- 绘图函数 -----------------
+function plot_coeff_comparison(ω, coeff_list, ζ_list, ylabel_str, title_str, savepath)
+    plt = plot(
+        xlabel=L"\omega\ (rad/s)",
+        ylabel=ylabel_str,
+        title=title_str,
+        dpi=600,
+        legend=:bottomleft,
+        grid=true,
+        size=(800, 500)
+    )
+
+    # 手动设定颜色和线型
+    colors = [:red, :blue, :red, :blue, :red]
+    styles = [:solid, :solid, :dot, :dot, :dash]
+
+    for (i, coeff) in enumerate(coeff_list)
+        plot!(
+            ω, coeff,
+            lw=1.8,
+            color=colors[i],
+            linestyle=styles[i],
+            label=L"\zeta = "*string(ζ_list[i])
+        )
+    end
+
+    savefig(plt, savepath)
+    println("✅ Saved: $savepath")
+end
+
+# ----------------- 绘制各图 -----------------
+plot_coeff_comparison(ω_ref, Kr_list, ζ_list, L"K_r", "Reflection Coefficient",
+    joinpath(resDir, "merged/Kr_vs_omega.png"))
+
+plot_coeff_comparison(ω_ref, Ka_list, ζ_list, L"K_a", "Absorption Coefficient",
+    joinpath(resDir, "merged/Ka_vs_omega.png"))
+
+plot_coeff_comparison(ω_ref, Kt_list, ζ_list, L"K_t", "Transmission Coefficient",
+    joinpath(resDir, "merged/Kt_vs_omega.png"))
+
+end
