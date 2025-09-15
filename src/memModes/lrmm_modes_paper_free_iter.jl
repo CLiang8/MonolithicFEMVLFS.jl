@@ -68,7 +68,8 @@ function run_case(rMfac = 1, rωfac = 2.4)
     # meff = diag((V[1:end-1, 1:nωₙ])' * Mtot * V[1:end-1, 1:nωₙ])
 
     # H transpose
-    Mherm = real((Mtot + Mtot')/2)
+    # Mherm = real((Mtot + Mtot')/2)
+    Mherm = real(Mtot) #  should work the same if syymmetric
     meff = diag((V[1:end-1, 1:nωₙ])' * Mherm * V[1:end-1, 1:nωₙ])
     
     # couple with K44
@@ -91,9 +92,9 @@ function run_case(rMfac = 1, rωfac = 2.4)
   filename = name*"/mem"
 
   # 跳过已存在的文件夹的计算
-  if( isdir(name) )
-    return
-  end
+  # if( isdir(name) )
+  #   return
+  # end
 
   mkpath(name)
   @info "▶ Running case rMᵨ = $rMfac, rω = $rωfac"
@@ -386,8 +387,11 @@ end
 # rMfac = 1000
 # rωfac = [1.01, 1.50, 2.00, 2.50, 3.00, 3.50, 4.00, 4.50, 5.00 ]
 
-rMfac = 0.1:0.1:1.0
-rωfac = 2.4
+# rMfac = [0.1, 0.3, 0.5]
+# rωfac = [1.5, 3.5, 4.5]
+
+rMfac = [0.1]
+rωfac = [2.4]
 
 # rMfac = 0.1:0.1:1.0
 # rωfac = 2.40
