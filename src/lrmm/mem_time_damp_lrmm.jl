@@ -13,10 +13,11 @@ using .WaveTimeSeries
 using WriteVTK
 
 
-name::String = "data/sims_202506/run/mono_time_lrmm"
+name::String = "data/sims_202507/mono_time_lrmm"
 order::Int = 2
 vtk_output::Bool = true
 filename = name*"/mem"
+mkpath(name)
 
 ρw = 1025 #kg/m3 water
 H0 = 10 #m #still-water depth
