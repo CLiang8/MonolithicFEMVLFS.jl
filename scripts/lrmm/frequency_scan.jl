@@ -18,21 +18,23 @@ resDir::String = "data/sims_mem_freq_lrmm"
 # params = Memb_undamped_2D.Memb_params_warmup(name = resDir*"/Coefficients")
 # Memb_undamped_2D.main(params)
 
-# single rω run for coefficients and contour
-params = Memb_undamped_2D.Memb_params(name = resDir*"/Coefficients")
-Memb_undamped_2D.main(params)
+# # single rω run for coefficients and contour
+# params = Memb_undamped_2D.Memb_params(name = resDir*"/Coefficients")
+# Memb_undamped_2D.main(params)
 
-include("plot.jl")
-using .plot_response_contour
-using .plot_energy_coefficients
+# include("plot.jl")
+# using .plot_response_contour
+# using .plot_energy_coefficients
 
-name = "data/sims_mem_freq_lrmm/Coefficients/"
-if isfile(joinpath(name, "mem_data.jld2"))
-    plot_contour(name)
-    plot_coefficients(name)
-else
-    @warn "Missing data file at $name"
-end
+# name = "data/sims_mem_freq_lrmm/Coefficients/"
+# if isfile(joinpath(name, "mem_data.jld2"))
+#     plot_contour(name)
+#     plot_coefficients(name)
+# else
+#     @warn "Missing data file at $name"
+# end
+
+
 
 params = Memb_undamped_2D.Memb_params(name = resDir*"/Memcase")
 Memb_undamped_2D.main(params)
