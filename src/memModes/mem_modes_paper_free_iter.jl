@@ -44,7 +44,8 @@ function run_case(mfac = 0.9, tfac = 0.1)
     V = LinearAlgebra.eigvecs(Mtot\Matrix(K11))      
     # @show real.(λ[1:nωₙ])
     # ωₙ = sqrt.(real.(λ))
-    
+    meff = diag(transpose(V[:, 1:nωₙ]) * Mtot * V[:, 1:nωₙ])
+
     # Wrong
     # Ur, S, Vr = svd(Mtot\Matrix(K11))    
     # λ = reverse(S)
@@ -54,12 +55,13 @@ function run_case(mfac = 0.9, tfac = 0.1)
     # return(rλ[1:nωₙ], V[:,1:nωₙ])
 
     @show sqrt.(λ[1:nωₙ])
-    return(λ[1:nωₙ], V[:,1:nωₙ])
+    return(λ[1:nωₙ], V[:,1:nωₙ], meff)
       
   end
 
   caseName = "ten" * @sprintf("%0.2f", tfac) *"_mass" * @sprintf("%0.2f", mfac)
-  name::String = "data/sims_202403/mem_modes_free/mem_modes_"*caseName
+  # name::String = "data/sims_202403/mem_modes_free/mem_modes_"*caseName
+  name::String = "data/sims_memmodes/mem_modes_wet_free"
   order::Int = 2
   vtk_output::Bool = true
   filename = name*"/mem"
@@ -249,10 +251,11 @@ function run_case(mfac = 0.9, tfac = 0.1)
   #xp = range(xm₀, xm₁, size(V,2)+2)
 
   maxIter = 20
-  nωₙ = 6
+  nωₙ = 7
   da_ωₙ = zeros(Float64, 1, nωₙ)
   @show ωₙ=zeros(Float64, 1, nωₙ) .+ ω
   da_V = []
+  da_meff=[]
 
   # # For index=1 not looping coz ωₙ[1] = 0.0
   # i = 1
@@ -263,7 +266,7 @@ function run_case(mfac = 0.9, tfac = 0.1)
   for i in 1:nωₙ
     # global da_ωₙ, da_V  
     # global ωₙ, ω
-    local V, lIter
+    local V, lIter, meff
     lIter = 0    
     Δω = 1
     ω = ωₙ[i]
@@ -275,7 +278,7 @@ function run_case(mfac = 0.9, tfac = 0.1)
       # ωₒ = ω      
       # ωᵣ = sqrt(rλ[i])
 
-      λ, V = run_freq(ω)
+      λ, V, meff = run_freq(ω)
       ωₒ = ω      
       ωᵣ = real(sqrt(λ[i]))
 
@@ -300,16 +303,19 @@ function run_case(mfac = 0.9, tfac = 0.1)
     end
     da_ωₙ[i] = ω
     push!(da_V, V[:,i])
+    push!(da_meff, meff[i])
   end
 
   println(da_ωₙ)
+  println(da_meff)
 
   xp = range(xm₀, xm₁, length(da_V[1]))
 
   data = Dict(
     "xp" => xp,
     "ωₙ" => da_ωₙ,
-    "V" => da_V  
+    "V" => da_V ,
+    "meff" => da_meff,
   )
 
   wsave(filename*"_modesdata.jld2", data)
