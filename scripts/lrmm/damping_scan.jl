@@ -255,8 +255,9 @@ function plot_coeff_comparison(ω, coeff_list, ζ_list, ylabel_str, title_str, s
         xlabel=L"\omega\ (rad/s)",
         ylabel=ylabel_str,
         title=title_str,
+        xlims = (1, maximum(ω)),
         dpi=600,
-        legend=:bottomleft,
+        legend=:left,
         grid=true,
         size=(800, 500)
     )
@@ -288,5 +289,8 @@ plot_coeff_comparison(ω_ref, Ka_list, ζ_list, L"K_a", "Absorption Coefficient"
 
 plot_coeff_comparison(ω_ref, Kt_list, ζ_list, L"K_t", "Transmission Coefficient",
     joinpath(resDir, "merged/Kt_vs_omega.png"))
+
+plot_coeff_comparison(ω_ref, Err_list, ζ_list, L"Error", "Computational Error",
+    joinpath(resDir, "merged/Err_vs_omega.png"))
 
 end
