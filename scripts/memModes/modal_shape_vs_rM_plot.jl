@@ -5,7 +5,7 @@ using JLD2, Plots, LaTeXStrings, Printf
 # === 用户参数设置 ===
 rω = 2.40
 rM_list = [0.3, 0.5, 1.0]  # ✅ 改为循环 rM
-n_modes = 7
+n_modes = 6
 Lm = 20.0
 base_dir = "data/sims_memmodes/lrmm_modes_wet/"
 output_dir = joinpath(base_dir, "plot_rM_sweep")
@@ -28,7 +28,7 @@ for rM in rM_list
 
     data = load(path)
     xp = (data["xp"] .- Lm) ./ 10  # ✅ 单位化横坐标（可调整偏移）
-    Vlist = data["V"]
+    Vlist = data["V"][2:end]  # Skip the first mode (rigid body mode)
 
     for i in 1:n_modes
         V = Vlist[i]

@@ -16,7 +16,7 @@ for rω in rω_list
     file_path = "data/sims_memmodes/lrmm_modes_wet/lrmm_modes_" * case_name * "/mem_modesdata.jld2"
     data = load(file_path)
 
-    q_modes = data["q_modes"]
+    q_modes = data["q_modes"][2:end]  # Skip the first mode (rigid body mode)
     q_abs = [real(q[1]) for q in q_modes]
     q_abs = abs.(q_abs)  # 展平为一维向量  # 可选用 real.(q_modes[:]) 画实部
     modes = 1:length(q_abs)
@@ -35,7 +35,7 @@ for rω in rω_list
     )
 
     savefig(plt, base_dir * "/q_bar_rω_" * @sprintf("%.2f", rω) * ".png")
-    println("✅ Saved: $savefile")
+    # println("✅ Saved: $savefile")
 end
 
 end # module
