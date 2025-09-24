@@ -71,7 +71,7 @@ end
 
 rω = 2.4
 
-name::String = @sprintf("data/sims_202508/mem_modes_wet_lrmm_rω%.2f", rω)
+name::String = "data/sims_memmodes/mem_modes_wet_lrmm"
 order::Int = 1
 vtk_output::Bool = true
 filename = name*"/mem"

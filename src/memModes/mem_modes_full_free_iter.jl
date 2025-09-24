@@ -40,13 +40,14 @@ function run_freq(ω)
   λ = LinearAlgebra.eigvals(Mtot\Matrix(K11))
   V = LinearAlgebra.eigvecs(Mtot\Matrix(K11))  
   #@show real.(λ[1:nωₙ])
+  meff = diag(transpose(V[:, 1:nωₙ]) * Mtot * V[:, 1:nωₙ])
   ωₙ = sqrt.(real.(λ))
-  return(ωₙ[1:nωₙ], V[:,1:nωₙ])
+  return(ωₙ[1:nωₙ], V[:,1:nωₙ], meff)
     
 end
 
 
-name::String = "data/sims_202508/mem_modes_wet_free"
+name::String = "data/sims_memmodes/mem_modes_wet_free"
 order::Int = 1
 vtk_output::Bool = true
 filename = name*"/mem"
@@ -230,10 +231,11 @@ println("[MSG] Done Global matrices")
 
 #xp = range(xm₀, xm₁, size(V,2)+2)
 
-nωₙ = 10
+nωₙ = 7
 da_ωₙ = zeros(Float64, 1, nωₙ)
 @show ωₙ=zeros(Float64, 1, nωₙ) .+ ω
 da_V = []
+da_meff=[]
 
 # # For index=1 not looping coz ωₙ[1] = 0.0
 # i = 1
@@ -242,17 +244,17 @@ da_V = []
 # push!(da_V, V[:,i])
 
 for i in 1:nωₙ
-  global da_ωₙ, da_V  
+  global da_ωₙ, da_V, da_meff
   global ωₙ, ω
-  local V
+  local V, meff
   Δω = 1
   ω = ωₙ[i]
-  while Δω > 1e-4
+  while Δω > 1e-3
     global ω, ωₙ
-    ωₙ, V = run_freq(ω)
-    Δω = abs(ωₙ[i] - ω)
+    ωₙ, V, meff = run_freq(ω)
+    Δω = abs(ωₙ[i] - ω)/ω
     if(i==1)
-      # ω = 0.2 * ωₙ[i] + 0.8*ω
+      ω = 0.2 * ωₙ[i] + 0.8*ω
       ω = 0.0
       Δω = 0.0
       V = V*0.0
@@ -264,6 +266,7 @@ for i in 1:nωₙ
   end
   da_ωₙ[i] = ω
   push!(da_V, V[:,i])
+  push!(da_meff, meff[i])
 end
 
 println("ωₙ = $(da_ωₙ)")
@@ -273,7 +276,8 @@ xp = range(xm₀, xm₁, length(da_V[1]))
 data = Dict(
   "xp" => xp,
   "ωₙ" => da_ωₙ,
-  "V" => da_V  
+  "V" => da_V,
+  "meff" => da_meff,
 )
 
 wsave(filename*"_modesdata.jld2", data)
