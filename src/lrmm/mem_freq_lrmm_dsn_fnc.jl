@@ -140,6 +140,7 @@ function main(params)
 
     push!(prbDaΓη, ηₕ(prxΓη))
     push!(prbDaΓκ, κₕ(prxΓκ))
+    push!(prbDaΓκr, κr(prxΓκ))
 
     push!(prbPow, [Pin, Prf, Ptr, Pd, PErr, 0.0, Pd_r...])
 
@@ -428,6 +429,7 @@ function main(params)
   prbDaΓη = DataFrame(lDa, :auto)
   lDa = zeros(ComplexF64, 1, length(prxΓκ))
   prbDaΓκ = DataFrame(lDa, :auto)
+  prbDaΓκr = DataFrame(lDa, :auto)
 
   prbPow = DataFrame(zeros(Float64, 1, 6+length(rS)), :auto)
 
@@ -448,6 +450,7 @@ function main(params)
   prbDa_x = prbDa_x[2:end, :]
   prbDaΓη = prbDaΓη[2:end,:]
   prbDaΓκ = prbDaΓκ[2:end,:]
+  prbDaΓκr = prbDaΓκr[2:end,:]
   @show prbPow = prbPow[2:end,:]
 
   k = dispersionRelAng.(H0, ω; msg=false)
@@ -527,6 +530,7 @@ function main(params)
               "prxΓη" => prxΓη,
               "prbDaΓκ" => prbDaΓκ,
               "prbDaΓη" => prbDaΓη,
+              "prbDaΓκr" => prbDaΓκr,
               "prbPow" => prbPow,
               "rS" => rS )
 
@@ -604,25 +608,17 @@ Parameters for the VIV.jl module.
 end
 
 @with_kw struct Memb_params
-  name::String = "data/sims_202509/spec_free"
+  name::String = "data/sims_202509/newcorefunc"
   order::Int = 2
   vtk_output::Bool = true
 
   H0 = 10 #m #still-water depth
 
   # Wave parameters
-  # ω, S, η₀ = jonswap(0.4, 2.5; 
-  #     plotflag=true, plotloc=filename, nω=145)
-  # println(ω[1], "\t", ω[2], "\t", ω[end])
-  # ω = ω[2:end]
-  # S = S[2:end]
-  # η₀ = η₀[2:end]
-  # ω = [2*π/2.53079486745378, 2*π/2.0]
-  # η₀ = [0.25, 0.25]
-  ω = 1.0:0.5:5
-  T = 2*π./ω
-  η₀ = 0.10*ones(length(ω))
-  α = randomPhase(ω; seed=100)
+  ω::Vector{Float64} = 1.0:0.5:5.0
+  T::Vector{Float64} = 2*π./ω
+  η₀::Vector{Float64} = 0.10*ones(length(ω))
+  α::Vector{Float64} = randomPhase(ω; seed=100)
   # k = dispersionRelAng.(H0, ω; msg=false)
 
   # Membrane parameters
@@ -663,11 +659,65 @@ end
 
 end
 
+@with_kw struct Memb_params_nolrmm
+  name::String = "data/sims_202509/onlymem"
+  order::Int = 2
+  vtk_output::Bool = true
+
+  H0 = 10 #m #still-water depth
+
+  # Wave parameters
+  ω::Vector{Float64} = 1.0:0.5:5.0
+  T::Vector{Float64} = 2*π./ω
+  η₀::Vector{Float64} = 0.10*ones(length(ω))
+  α::Vector{Float64} = randomPhase(ω; seed=100)
+  # k = dispersionRelAng.(H0, ω; msg=false)
+
+  # Membrane parameters
+  Lm = 2*H0 #m
+  Wm = Lm  
+  mᵨ = 0.9 #mass per unit area of membrane / ρw
+  Tᵨ = 0.1/4*g*Lm*Lm #T/ρw
+  τ = 0.0#damping coeff  
+
+  # Domain 
+  nx = 1650
+  ny = 20
+  mesh_ry = 1.2 #Ratio for Geometric progression of eleSize
+  Ld = 15*H0 #damping zone length
+  LΩ = 18*H0 + Ld #2*Ld
+  x₀ = -Ld
+  domain =  (x₀, x₀+LΩ, -H0, 0.0)
+  partition = (nx, ny)
+  xdᵢₙ = 0.0
+  xm₀ = xdᵢₙ + 8*H0
+  xm₁ = xm₀ + Lm
+
+  # Resonator parameters
+  rS = Resonator.Array1D(
+    1, 
+    0.001, 
+    0.001, 
+    0.0,
+    [Point(xm₀ + Lm/2.0,0.0)]
+  )
+
+  # Probes
+  prbx=[  -20.0, 0.0, 20.0, 40.0, 50.0, 
+          52.7, 53.7, 55, 60.0, 80.0, 
+          85.0, 90.0, 95.0, 100.0, 120.0, 
+          125.0, 140.0, 160.0, 180.0 ]
+  prbPowx=[ 55.0, 125.0 ]
+
+end
+
+
+
 # ----------------------------------------------------------execution-----------------------------------------------------------
 
 # params = Memb_params_warmup()
-params = Memb_params()
-main(params)
+# params = Memb_params()
+# main(params)
 
 
 end
