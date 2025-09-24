@@ -47,7 +47,8 @@ function run_freq(ω)
   #@show real.(λ[1:nωₙ])
   @show sum(imag.(λ))
   ωₙ = real.(sqrt.(λ))
-  return(ωₙ[1:nωₙ], V[:,1:nωₙ])
+  meff = diag((V[:, 1:nωₙ])' * Matrix(B) * V[:, 1:nωₙ])
+  return(ωₙ[1:nωₙ], V[:,1:nωₙ], meff)
     
 end
 
@@ -68,7 +69,7 @@ mᵨ = 0.9 #mass per unit area of membrane / ρw
 Tᵨ = 0.1*g*H0*H0 #T/ρw
 
 # Resonator parameters
-rM = 1000   # kg
+rM = 1025   # kg
 # rK = 5.9e3  # N/m
 rMᵨ = rM/ρw
 rkᵨ = 2.4*2.4*rMᵨ  # N/m
@@ -252,10 +253,11 @@ println("[MSG] Done Global matrices")
 
 #xp = range(xm₀, xm₁, size(V,2)+2)
 
-nωₙ = 10
+nωₙ = 7
 da_ωₙ = zeros(Float64, 1, nωₙ)
 @show ωₙ=zeros(Float64, 1, nωₙ) .+ ω
 da_V = []
+da_meff=[]
 
 # # For index=1 not looping coz ωₙ[1] = 0.0
 # i = 1
@@ -264,20 +266,21 @@ da_V = []
 # push!(da_V, V[:,i])
 
 for i in 1:nωₙ
-  global da_ωₙ, da_V  
+  global da_ωₙ, da_V, da_meff
   global ωₙ, ω
-  local V
+  local V, meff
   Δω = 1
-  ω = ωₙ[i]
+  # ω = ωₙ[i] #只循环一次没有错，因为使用这个输入得到的结果差异非常小
+  ω = 1.0
   while Δω > 1e-4
     global ω, ωₙ
-    ωₙ, V = run_freq(ω)
+    ωₙ, V, meff = run_freq(ω)
     Δω = abs(ωₙ[i] - ω)
     if(i==1)
-      ω = 0.2 * ωₙ[i] + 0.8*ω
-      # ω = 0.0
-      # Δω = 0.0
-      # V = V*0.0
+      # ω = 0.2 * ωₙ[i] + 0.8*ω
+      ω = 0.0
+      Δω = 0.0
+      V = V*0.0
     else
       ω = 0.8 * ωₙ[i] + 0.2*ω
     end
@@ -287,6 +290,7 @@ for i in 1:nωₙ
   end
   da_ωₙ[i] = ω
   push!(da_V, V[:,i])
+  push!(da_meff, meff[i])
 end
 
 println(da_ωₙ)
@@ -312,10 +316,11 @@ data = Dict(
   "ωₙ" => da_ωₙ,
   "V" => η_all,
   "q_modes" => q_all,
+  "meff" => da_meff,
 )
 
 # wsave("$(filename)_modesdata_m=$(rM).jld2", data)
-wsave(filename * "_modesdata_lrmm.jld2", data)
+wsave(filename * "_modesdata.jld2", data)
 
 end
 
@@ -371,3 +376,8 @@ plt2 = bar(abs.([q[1] for q in q_all]),
 
 savefig(plt2, filename * "_q_modal_participation.png")
 display(plt2)
+
+
+
+[0.0 1.640026952944678 2.2920899972167996 3.457487224730274 4.921699633118937 6.619904585069279 8.208230216370401]
+[0.0 1.6400187605996805 2.2920734584648352 3.457480933562979 4.921689593567876 6.619890198113541 8.208211763301048]
