@@ -91,7 +91,7 @@ Tᵨ = 0.1*g*H0*H0 #T/ρw
 ω = 1.0
 
 # Resonator parameters
-rMᵨ = 1.0 #Kg
+rMᵨ = 0.1 #1.0 #Kg
 # rKᵨ = 5.9e3 #N/m
 rKᵨ = rω*rω*rMᵨ
 ζ = 0 # 0.05 #damping ratio
@@ -340,6 +340,6 @@ data = Dict(
   "q_modes" => q_all,
 )
 
-wsave(filename*"_modesdata.jld2", data)
+wsave(filename*"_modesdata_M=0.1.jld2", data)
 
 end

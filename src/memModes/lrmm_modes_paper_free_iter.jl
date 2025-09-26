@@ -44,9 +44,10 @@ function run_case(rMfac = 1, rωfac = 2.4)
     # tick()
     Mϕ = K22 - ( C23 * (Matrix(K33) \ C32) )
     Mhat = C12 * (Mϕ \ C21)
+
     Mtot = M11 + Mhat
 
-    # # Spring-mass coupling
+    # # Spring-mass coupling: this doesn't work
     # Rosc = -C14 * ((-ω^2 * M44 + K44) \ C41)
     # Ktot = K11 + K11r + Rosc
     # Meff = Mtot - (1/ω^2) * Rosc
@@ -55,6 +56,9 @@ function run_case(rMfac = 1, rωfac = 2.4)
     # Eigen values
     # λ = LinearAlgebra.eigvals(Mtot\Matrix(Ktot))
     # V = LinearAlgebra.eigvecs(Mtot\Matrix(Ktot))
+
+    # couple with: K44 this way does not make sense
+    # meff = diag((V[1:end-1, 1:nωₙ])' * Meff * V[1:end-1, 1:nωₙ])
     
     A = [K11 + K11r     C14;
          C41            K44] 
@@ -64,16 +68,14 @@ function run_case(rMfac = 1, rωfac = 2.4)
     λ, V = eigen(Matrix(B) \ Matrix(A))
     # @show sum(imag.(λ))
 
-    # meff = diag(transpose(V[1:end-1, 1:nωₙ]) * Mtot * V[1:end-1, 1:nωₙ])
+    #this is not right cuz now we solve EVP system A x = λ B x ,B is the mass
     # meff = diag((V[1:end-1, 1:nωₙ])' * Mtot * V[1:end-1, 1:nωₙ])
 
-    # H transpose
-    # Mherm = real((Mtot + Mtot')/2)
-    Mherm = real(Mtot) #  should work the same if syymmetric
-    meff = diag((V[1:end-1, 1:nωₙ])' * Mherm * V[1:end-1, 1:nωₙ])
-    
-    # couple with K44
-    # meff = diag((V[1:end-1, 1:nωₙ])' * Meff * V[1:end-1, 1:nωₙ])
+    meff = diag((V[:, 1:nωₙ])' * Matrix(B) * V[:, 1:nωₙ])
+
+    # # H transpose
+    # Mherm = real(Mtot) #  should work the same if syymmetric
+    # meff = diag((V[1:end-1, 1:nωₙ])' * Mherm * V[1:end-1, 1:nωₙ])
 
     ωₙ = real.(sqrt.(Complex.(λ))) #damped frequency
     # α = -imag.( sqrt.(Complex.(λ)) ) # decay rate
@@ -390,8 +392,8 @@ end
 # rMfac = [0.1, 0.3, 0.5]
 # rωfac = [1.5, 3.5, 4.5]
 
-rMfac = [0.1]
-rωfac = [2.4]
+rMfac = [0.1, 0.3, 0.5, 1.0]
+rωfac = [1.5]
 
 # rMfac = 0.1:0.1:1.0
 # rωfac = 2.40
