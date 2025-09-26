@@ -1,10 +1,10 @@
 module plot_frequency_scan
-using JLD2, Plots, DataFrames, LaTeXStrings
+using JLD2, Plots, DataFrames, LaTeXStrings, Gridap
 
 # 参数
 resDir = "data/sims_mem_freq_lrmm/Frequency_scan"
 # rω_list = [0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0]
-rω_list = 0.7:0.05:5.0  # 与仿真一致
+rω_list = 0.95:0.05:5.0  # 与仿真一致
 Kr_list, Kt_list, Ka_list, Err_list = [], [], [], []
 # ω_ref = nothing  # 统一ω向量
 first_file = joinpath(resDir, "rω_$(round(rω_list[1]; digits=2))", "mem_data.jld2")
@@ -55,7 +55,7 @@ function plot_energy_map(Z, ω, rω_list; title="", savepath="")
         ω, rω_list, Z,
         xlabel = L"wave frequency $\omega\ (rad/s)$",
         ylabel = L"Resonator $rω\ (rad/s)$",
-        xlims = (minimum(ω), maximum(ω)),
+        xlims = (minimum(rω_list), maximum(ω)),
         ylims = (minimum(rω_list), maximum(rω_list)),
         colorbar_title = "Value",
         title = title,
