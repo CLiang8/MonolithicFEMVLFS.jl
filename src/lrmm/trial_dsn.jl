@@ -22,9 +22,9 @@ mkpath(filename)
 H0 = 10 #m #still-water depth
 
 
-# Wave parameters
+# Wave parameters 
 ω, S, η₀ = jonswap(0.4, 2.5; 
-    plotflag=true, plotloc=filename, nω=145)
+    plotflag=true, plotloc=filename, nω=200)
 println(ω[1], "\t", ω[2], "\t", ω[end])
 ω = ω[2:end]
 S = S[2:end]
@@ -34,6 +34,10 @@ S = S[2:end]
 # η₀ = [0.3, 0.4, 0.1]
 # @show α = randomPhase(ω; seed=100)
 
+# 最主要频率以及波高（对应S最大）
+# === [新增] 打印 S 最大值对应的 ω 和 η₀ ===
+i_peak = argmax(S)
+println("Peak of S(ω): ω = ", ω[i_peak], " rad/s, η₀ = ", η₀[i_peak], " m")
 
 # 累计能量（支持不等距网格）
 function cumtrapz(ω, y)
