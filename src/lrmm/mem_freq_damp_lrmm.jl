@@ -405,4 +405,34 @@ data = Dict("ϕₕ" => ϕₕ,
 
 wsave(filename*"_data.jld2", data)
 
+
+# for plot amplitude
+# === Step 1: 设置插值点 ===
+x_η   = collect(80.0:0.2:100.0)
+x_kr  = collect(50.0:0.2:80.0)
+x_kin = vcat(collect(50.0:0.2:80.0), collect(100.0:0.2:130.0))
+x_kh  = vcat(collect(50.0:0.2:80.0), collect(100.0:0.2:130.0))
+
+# === Step 2: 插值 ===
+# 注意：这些函数 ηₕ, κₕ, κr, κin 应该在上面已经计算并存在
+η_vals   = [ηₕ(Point(x, 0.0)) for x in x_η]
+kr_vals  = [κr(Point(x, 0.0)) for x in x_kr]
+kin_vals = [κin(Point(x, 0.0)) for x in x_kin]
+kh_vals  = [κₕ(Point(x, 0.0)) for x in x_kh]
+
+# === Step 3: 保存 JLD2 文件 ===
+plot_data = Dict(
+    "ω" => ω,  # 当前频率
+    "x_η" => x_η,
+    "x_kr" => x_kr,
+    "x_kin" => x_kin,
+    "x_kh" => x_kh,
+    "η_vals" => η_vals,
+    "kr_vals" => kr_vals,
+    "kin_vals" => kin_vals,
+    "kh_vals" => kh_vals,
+)
+wsave("data/sims_202507/mono_freq_lrmm_damp/lrmm_plotdata.jld2", plot_data)
+
+
 end
