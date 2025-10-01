@@ -13,7 +13,7 @@ using TickTock
 @quickactivate "MonolithicFEMVLFS.jl"
 
 # Here you may include files from the source directory
-include(srcdir("lrmm","mem_freq_lrmm_dsn_fnc.jl"))
+include(srcdir("lrmm","mem_freq_lrmm_dsn_fnc copy.jl"))
 
 resDir::String = "data/sims_202509/newcorefunc"
 filename = resDir*"/mem"
@@ -67,31 +67,31 @@ function generate_wave_parameters(Hs::Float64, Tp::Float64, cov::Float64;
     return ω_sel, η₀_sel, α
 end
 
-ω, η₀, α = generate_wave_parameters(0.4, 2.5, 0.95; plotloc=resDir*"/mem")
+ω, η₀, α = generate_wave_parameters(4.0, 2.5, 0.95; plotloc=resDir*"/mem")
 
-# # === Run simulation with Membrane + LRMM ===
-# params = Memb2D.Memb_params(;
-#     name = "data/sims_202509/newcorefunc",
-#     ω = ω,
-#     η₀ = η₀,
-#     α = α,
-#     T = 2π ./ ω,
-# )
-
-# tick()
-# Memb2D.main(params)
-# tock()
-
-# === Run simulation with Membrane only (no LRMM) ===
-params_onlymem = Memb2D.Memb_params_nolrmm(;
-    name = "data/sims_202509/onlymem",
+# === Run simulation with Membrane + LRMM ===
+params = Memb2D.Memb_params(;
+    name = "data/sims_202509/newcorefunc",
     ω = ω,
     η₀ = η₀,
     α = α,
     T = 2π ./ ω,
 )
 
-Memb2D.main(params_onlymem)
+tick()
+Memb2D.main(params)
+tock()
+
+# # === Run simulation with Membrane only (no LRMM) ===
+# params_onlymem = Memb2D.Memb_params_nolrmm(;
+#     name = "data/sims_202509/onlymem",
+#     ω = ω,
+#     η₀ = η₀,
+#     α = α,
+#     T = 2π ./ ω,
+# )
+
+# Memb2D.main(params_onlymem)
 end
 
 
@@ -110,11 +110,18 @@ using QuadGK
 println("Loading and plotting energy coefficients...")
 
 name::String = "data/sims_202509/newcorefunc"
+# name::String = "data/sims_202509/onlymem"
+# name::String = "data/sims_202509/tryMonopile"
+
 file = name * "/mem_data.jld2"
-# file = name * "/mem_data_merged.jld2"
+folder = name * "/mem_plots"
+mkpath(folder)
+
 data = load(file)
 prbPow = Matrix(data["prbPow"])
+prbForce = Matrix(data["prbForce"])
 ω = data["ω"]
+k = data["k"]
 
 Pin = prbPow[:, 1]
 Prf = prbPow[:, 2]
@@ -125,6 +132,11 @@ Kr = Prf ./ Pin
 Kt = Ptr ./ Pin
 Ka = Pd_total  ./ Pin
 Err = 1 .- (Kr .+ Kt .+ Ka)
+
+Fcyl_x = abs.(real.(prbForce[:, 2]))
+Fcyl_x = abs.(prbForce[:, 2])
+Fcyl_x_nd = Fcyl_x ./ (1025* 10 * k .* ω.^2)
+# @show length(Fcyl_x)
 
 # # 反射系数 Kr
 # plot(ω, Kr, label="Kr (Reflected)", lw=2)
@@ -150,33 +162,46 @@ Err = 1 .- (Kr .+ Kt .+ Ka)
 # savefig( name * "/mem_plots/Ka_vs_omega.png")
 # println("✅ Saved: Ka_vs_omega.png")
 
-# 反射能量 Pr
-plot(ω, Prf, label="Pr (Reflected)", lw=2)
-xlabel!(L"\omega\ \mathrm{(rad/s)}")
-ylabel!(L"P_{rf}\ \mathrm{(W/m)}")
-title!("Reflection Power vs Frequency")
-savefig( name * "/mem_plots/Pr_vs_omega.png")
-println("✅ Saved: Pr_vs_omega.png")
+# # 反射能量 Pr
+# plot(ω, Prf, label="Pr (Reflected)", lw=2)
+# xlabel!(L"\omega\ \mathrm{(rad/s)}")
+# ylabel!(L"P_{rf}\ \mathrm{(W/m)}")
+# title!("Reflection Power vs Frequency")
+# savefig( name * "/mem_plots/Pr_vs_omega.png")
+# println("✅ Saved: Pr_vs_omega.png")
 
-# --- fit and numerical integration to get total reflected power ---
-spline = Spline1D(ω, Prf)
-Prf_fit = spline.(ω)
+# monopile force Fx
+plt = plot(ω, Fcyl_x,
+    label="Fcyl_x (Monopile Force)",
+    lw=2,
+    xlabel=L"\omega\ \mathrm{(rad/s)}",
+    ylabel=L"F_{x}\ \mathrm{(N/m)}",
+    title="Monopile Force vs Frequency",
+    margin = 10mm,
+    size=(1200, 700),
+    dpi = 300
+)
 
-# # plot raw and fitted Prf
-# plt = plot(ω, Prf, label="Prf (Raw)", lw=2, markersize=3)
-# plot!(plt, ω, Prf_fit, label="Prf (Spline Fit)", lw=2, linestyle=:dash)
+savefig(plt, folder * "/Fcylx_vs_omega.png")
+
+# --- fit and numerical integration to get total force on monopile ---
+spline = Spline1D(ω, Fcyl_x)
+Fcylx_fit = spline.(ω)
+
+# intergration
+area, err = quadgk(spline, minimum(ω), maximum(ω))
+println("✅ Total monopile force (spline fit integral): ", round(area, digits=5), " N·rad/(m·s)")
+println("Estimated error: ±", round(err, digits=2))
+
+# # plot raw and fitted Prf/Fcyl_x
+# plt = plot(ω, Fcyl_x, label="Prf (Raw)", lw=2, markersize=3)
+# plot!(plt, ω, Fcylx_fit, label="Prf (Spline Fit)", lw=2, linestyle=:dash)
 # xlabel!(plt, L"\omega\ \mathrm{(rad/s)}")
 # ylabel!(plt, L"P_{rf}\ \mathrm{(W/m)}")
 # title!(plt, "Reflected Power vs Frequency (Spline Fit)")
 # savefig(plt, name * "/mem_plots/Pr_vs_omega_spline.png")
 # println("✅ Saved: Pr_vs_omega_spline.png")
 
-
-# intergration
-area, err = quadgk(spline, minimum(ω), maximum(ω))
-println("✅ Total reflected power (spline fit integral): ", round(area, digits=5), " W·rad/(m⋅s)")
-println("Estimated error: ±", round(err, digits=2))
-# --- end fit and numerical integration ---
 
 # --- Multi-subplot: Power Balance (Kr, Kt, Ka, Error) ---
 plt1 = plot(ω, Kr, lw=2, label="", legend= false)
@@ -202,7 +227,8 @@ ylims!(plt4, (-0.05, 1.05))
 
 fullplot = plot(plt1, plt2, plt3, plt4, layout=(2,2), size=(1200,700),
     plot_title="Power Balance",
-    margin = 10mm )
+    leftmargin = 10mm,
+    topmargin = 4mm )
 
 savefig(fullplot, name * "/mem_plots/mem_powerBalance_grid.png")
 println("✅ Saved: mem_powerBalance_grid.png")
