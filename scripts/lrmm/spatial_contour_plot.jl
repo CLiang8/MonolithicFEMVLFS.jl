@@ -1,5 +1,7 @@
 module plot_spatial_scan_contour
-using JLD2, Plots, LaTeXStrings
+using JLD2, Gridap, DataFrames, Plots, LaTeXStrings
+
+# 这个脚本用于绘制每个频率文件夹下merge文件夹中的图片
 
 # 参数设置
 baseDir = "data/sims_mem_freq_lrmm/Spatial_scan"

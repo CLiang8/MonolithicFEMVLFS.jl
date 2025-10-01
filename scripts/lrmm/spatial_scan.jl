@@ -20,6 +20,17 @@ resDir::String = "data/sims_mem_freq_lrmm"
 
   H0 = 10 #m #still-water depth
 
+  #oscillator parameters
+  rM = 1.0e3 #Kg
+  rω = 3.0 #rad/s
+  rK = rM*rω^2 #N/m
+  ζ = 0.05 # 0.05 #damping ratio
+  rC = 2*ζ*sqrt(rK*rM) #N*s/m
+
+  #DiracDelta
+  #pts = [Point(95.0, 0.0)]
+  xr::Float64 = 90.0
+
   # Wave parameters
   # ω, S, η₀ = jonswap(0.4, 2.5; 
   #     plotflag=true, plotloc=filename, nω=145)
@@ -29,7 +40,8 @@ resDir::String = "data/sims_mem_freq_lrmm"
   # η₀ = η₀[2:end]
   # ω = [2*π/2.53079486745378, 2*π/2.0]
   # η₀ = [0.25, 0.25]
-  ω = 0.7:0.05:5.0
+  # ω = 1.0:0.05:5.0
+  ω = [rω-0.5: 0.05: rω+0.5] #try around rω
 
   T = 2*π./ω
   η₀ = 0.10*ones(length(ω))
@@ -43,16 +55,6 @@ resDir::String = "data/sims_mem_freq_lrmm"
   Tᵨ = 0.1/4*g*Lm*Lm #T/ρw
   τ = 0.0#damping coeff
 
-  #oscillator parameters
-  rM = 1.0e3 #Kg
-  rω = 3.0 #rad/s
-  rK = rM*rω^2 #N/m
-  ζ = 0.05 # 0.05 #damping ratio
-  rC = 2*ζ*sqrt(rK*rM) #N*s/m
-
-  #DiracDelta
-  #pts = [Point(95.0, 0.0)]
-  xr::Float64 = 90.0
 
   # Domain 
   nx = 1650
@@ -82,10 +84,10 @@ resDir = "data/sims_mem_freq_lrmm/Spatial_scan"
 # mkdir(resDir)
 
 xr_list = [80.05, 82.5, 80+10/3, 85, 80+20/3, 87.5, 90, 92.5, 90+10/3, 95, 90+20/3, 97.5, 99.95]
-rω_list = [1.0, 1.55, 2.0, 2.41, 3.0, 3.47, 4.0, 4.64, 5.0 ]
+# rω_list = [1.0, 1.55, 2.0, 2.41, 3.0, 3.47, 4.0, 4.64, 5.0 ]
 
 # xr_list = [80.05, 90,99.95]
-# rω_list = [1.0, 2.0]
+rω_list = [2.41]
 
 for rω in rω_list
     rM = 1.0e3
