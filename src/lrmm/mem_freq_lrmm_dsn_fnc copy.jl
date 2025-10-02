@@ -1,4 +1,4 @@
-module Memb2D
+module Memb2D_design
 
 using Gridap
 using Plots
@@ -147,7 +147,7 @@ function main(params)
     # 新增 cylinder pressure/force 计算
     P_cyl = ρw * im * ω * ϕₕ
     Fcyl = sum(∫( P_cyl * nΓot )dΓot)
-    @show P_cyl
+    # @show P_cyl
     @show Fcyl
     push!(prbForce, [ω, Fcyl[1], Fcyl[2]]) # x, y 分量
 
@@ -582,7 +582,7 @@ end
   H0 = 10 #m #still-water depth
 
   # Wave parameters
-  ω::Vector{Float64} = 1.0:0.5:5.0
+  ω::Vector{Float64} = 1.0:0.05:5.0
   T::Vector{Float64} = 2*π./ω
   η₀::Vector{Float64} = 0.10*ones(length(ω))
   α::Vector{Float64} = randomPhase(ω; seed=100)
@@ -634,7 +634,7 @@ end
   H0 = 10 #m #still-water depth
 
   # Wave parameters
-  ω::Vector{Float64} = 1.0:0.5:5.0
+  ω::Vector{Float64} = 1.0:0.05:5.0
   T::Vector{Float64} = 2*π./ω
   η₀::Vector{Float64} = 0.10*ones(length(ω))
   α::Vector{Float64} = randomPhase(ω; seed=100)

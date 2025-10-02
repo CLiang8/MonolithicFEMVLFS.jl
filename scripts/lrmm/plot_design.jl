@@ -10,8 +10,12 @@ Lc = 10     # height
 
 # === 你可以在这里自定义对比数据路径 ===
 data_paths = Dict(
-    "With LRMM"    => "data/sims_202509/newcorefunc/mem_data.jld2",
-    "Without LRMM" => "data/sims_202509/onlymem/mem_data.jld2",
+    # "No MEMMB or LRMM" => "data/sims_202509/empt/mem_data.jld2",
+    "MEMB Without LRMM" => "data/sims_202509/onlymem/mem_data.jld2",
+    "With LRMM ζ=0"     => "data/sims_202509/newcorefunc/mem_data.jld2",
+    "With LRMM ζ=0.02"  => "data/sims_202509/mem_lrmm_ζ/ζ_0.02/mem_data.jld2",
+    "With LRMM ζ=0.05"  => "data/sims_202509/mem_lrmm_ζ/ζ_0.05/mem_data.jld2",
+    "With LRMM ζ=0.1"  => "data/sims_202509/mem_lrmm_ζ/ζ_0.1/mem_data.jld2",
     # "try monopile with lrmm" => "data/sims_202509/tryMonopile/mem_data.jld2",
 )
 
@@ -38,16 +42,41 @@ for (label, path) in data_paths
         :Pd   => data["prbPow"][:,4],
         :Pd_total => data["prbPow"][:,4] + data["prbPow"][:,7],
         :Fcyl_x   => abs.(Fx),
-        :Fx_dimless => Fx_dimless
+        :Fx_dimless => Fx_dimless,
     )
 end
 
+# 自定义每条曲线的颜色,线型,顺序
+plot_styles = Dict(
+    # "No MEMMB or LRMM"   => (:black, :dot),
+    "MEMB Without LRMM"  => (:black, :solid),
+    "With LRMM ζ=0"      => (:blue, :solid),
+    "With LRMM ζ=0.02"   => (:red, :solid),
+    "With LRMM ζ=0.05"   => (:blue, :dot),
+    "With LRMM ζ=0.1"    => (:red, :dot),
+)
 
-# === 绘图：非维化 Fx vs ω 对比 ===
+plot_order = [
+    # "No MEMMB or LRMM",
+    "MEMB Without LRMM",
+    "With LRMM ζ=0",
+    "With LRMM ζ=0.02",
+    "With LRMM ζ=0.05",
+    "With LRMM ζ=0.1",
+]
+
+# === 绘图：非维化 Fx vs ω 对比（自定义样式） ===
 plt_fx = plot()
 
-for (label, r) in results
-    plot!(plt_fx, r[:ω], r[:Fx_dimless], label=label, lw=2)
+for label in plot_order
+    r = results[label]
+    color, style = plot_styles[label]
+    plot!(plt_fx, r[:ω], r[:Fx_dimless],
+        label = label,
+        color = color,
+        linestyle = style,
+        dpi = 300,
+        lw = 1.5)
 end
 
 xlabel!(plt_fx, L"\omega\ \mathrm{(rad/s)}")
@@ -56,22 +85,31 @@ title!(plt_fx, "Non-dimensional Monopile Force Comparison")
 savefig(plt_fx, joinpath(save_dir, "Fx_dimless_comparison.png"))
 println("✅ Saved: Fx_dimless_comparison.png")
 
-# === 计算积分：∫ Prf(ω) dω ===
+# 计算积分：∫ Prf(ω) dω
 println("\n===== Force on Monopile Integral Summary =====")
-for (label, r) in results
-    ω = r[:ω]
+for label in plot_order
+    r = results[label]
     Fcyl_x = r[:Fcyl_x]
+    ω = r[:ω]
     spline = Spline1D(ω, Fcyl_x)
     area, err = quadgk(spline, minimum(ω), maximum(ω))
     println("[$label] ∫ Fcyl_x(ω) dω ≈ ", round(area, digits=5), " W·rad/(m·s)  (±", round(err, digits=2), ")")
 end
 
+
 # === 绘图：K_A vs ω 对比 ===
 plt_ka = plot()
 
-for (label, r) in results
+for label in plot_order
+    r = results[label]
+    color, style = plot_styles[label]
     Ka = r[:Pd_total] ./ r[:Pin]   # K_A = Pd_total / Pin
-    plot!(plt_ka, r[:ω], Ka, label=label, lw=2)
+    plot!(plt_ka, r[:ω], Ka, 
+        label = label,
+        color = color,
+        linestyle = style,
+        dpi = 300,
+        lw = 1.5)
 end
 
 xlabel!(plt_ka, L"\omega\ \mathrm{(rad/s)}")
@@ -80,6 +118,18 @@ title!(plt_ka, "Absorption Coefficient Comparison")
 
 savefig(plt_ka, joinpath(save_dir, "Ka_comparison.png"))
 println("✅ Saved: Ka_comparison.png")
+
+# 计算积分：∫ Ka(ω) dω
+println("\n===== Energy Absorbed by the System Summary =====")
+for label in plot_order
+    r = results[label]
+    ω = r[:ω]
+    Ka = r[:Pd_total] ./ r[:Pin]
+    spline = Spline1D(ω, Ka)
+    area, err = quadgk(spline, minimum(ω), maximum(ω))
+    println("[$label] ∫ Kₐ(ω) dω ≈ ", round(area, digits=5), " W·rad/(m·s)  (±", round(err, digits=2), ")")
+end
+
 
 # === Power Balance subplot 对比 ===
 plt1 = plot(); plt2 = plot(); plt3 = plot(); plt4 = plot()
