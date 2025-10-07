@@ -69,7 +69,7 @@ function run_freq(ω)
       
 end
 
-rω = 2.4
+rω = 2.41
 
 name::String = "data/sims_memmodes/mem_modes_wet_lrmm"
 order::Int = 1
@@ -91,7 +91,7 @@ Tᵨ = 0.1*g*H0*H0 #T/ρw
 ω = 1.0
 
 # Resonator parameters
-rMᵨ = 0.1 #1.0 #Kg
+rMᵨ = 1000/ρw #1.0 #Kg
 # rKᵨ = 5.9e3 #N/m
 rKᵨ = rω*rω*rMᵨ
 ζ = 0 # 0.05 #damping ratio
@@ -340,6 +340,6 @@ data = Dict(
   "q_modes" => q_all,
 )
 
-wsave(filename*"_modesdata_M=0.1.jld2", data)
+wsave(filename*"_modesdata_M=1000.jld2", data)
 
 end
