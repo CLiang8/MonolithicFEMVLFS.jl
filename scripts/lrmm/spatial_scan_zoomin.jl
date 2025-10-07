@@ -32,7 +32,7 @@ resDir::String = "data/sims_mem_freq_lrmm"
   # η₀ = η₀[2:end]
   # ω = [2*π/2.53079486745378, 2*π/2.0]
   # η₀ = [0.25, 0.25]
-  ω = 1.4:0.05:3.0
+  ω = 2.2:0.025:2.55
 
   T = 2*π./ω
   η₀ = 0.10*ones(length(ω))
@@ -48,7 +48,7 @@ resDir::String = "data/sims_mem_freq_lrmm"
 
   #oscillator parameters
   rM = 1.0e3 #Kg
-  rω = 3.0 #rad/s
+  rω = 2.41 #rad/s
   rK = rM*rω^2 #N/m
   ζ = 0 # 0.05 #damping ratio
   rC = 2*ζ*sqrt(rK*rM) #N*s/m
