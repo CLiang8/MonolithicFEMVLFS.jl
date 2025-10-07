@@ -93,7 +93,7 @@ function run_freq(ω, A, α)
 end
 
 
-name::String = "data/sims_bounded_water"
+name::String = "data/sims_202506/sims_bounded_water"
 order::Int = 2
 vtk_output::Bool = true
 filename = name*"/mem"
