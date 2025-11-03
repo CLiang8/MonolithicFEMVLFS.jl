@@ -11,7 +11,7 @@ output_dir = joinpath(base_dir, "plot_ωn_vs_rω")
 mkpath(output_dir)
 # rM_list = [50.0, 500.0, 1000.0]
 # rω_list = [1.01, 1.50, 1.60, 1.70, 1.80, 1.90, 2.00, 2.10, 2.20, 2.30, 2.40, 2.50, 3.00, 3.50, 4.00, 4.50, 5.00, 5.50]
-rM_list = [1000]
+rM_list = [1000.0]
 # rω_list = 1.50:0.1:2.50
 rω_list = [1.01, 1.50, 2.00, 2.50, 3.00, 3.50, 4.00, 4.50, 5.00 ]
 n_modes = 7
@@ -56,15 +56,16 @@ function plot_modes_for_rM(rM::Float64)
               label = "mode $(i-1)",
               lw = 2,
               ylims = (0.5, 6.2 ),
+              dpi= 300,
             #   marker = :circle,
             #   markersize = 3,
         )
     end
 
-    xlabel!(L"\omega_r")
-    ylabel!(L"\omega_n^{(i)}")
-    title!("Wet natural frequencies vs resonator frequency\n(rM = $(Int(rM)))")
-    plot!(legend = :right, grid = true)
+    xlabel!(L"\omega_r\ (\mathrm{rad/s})")
+    ylabel!(L"\omega_n^{(i)}\ (\mathrm{rad/s})")
+    title!("Wet natural frequencies vs resonator frequency\n rM = $(Int(rM)) kg")
+    plot!(legend = :outerright, grid = true)
 
     # savefile = joinpath(output_dir, @sprintf("ωn_vs_rω_rM%d.png", Int(rM)))
     savefile = joinpath(output_dir, @sprintf("ωn_vs_rω_rM%d.png", Int(rM)))

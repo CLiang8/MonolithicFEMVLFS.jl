@@ -37,7 +37,7 @@ for rM in rM_list
     end
 
     modal_data[1]["xp"] = xp
-    push!(labels, @sprintf("rM = %.2f", rM))
+    push!(labels, @sprintf("rMᵨ = %.2f", rM))
 end
 
 # === 绘图 ===
@@ -45,12 +45,22 @@ for i in 1:n_modes
     xp = modal_data[1]["xp"]
     shapes = modal_data[i]["shapes"]
 
+    # --- 新增：按相关性与参考曲线对齐 ---
+    # 以第一条曲线作为参考（也可以换成某个固定 rM）
+    sref = shapes[1]
+    for j in eachindex(shapes)
+        if sum(shapes[j] .* sref) < 0
+            shapes[j] .= -shapes[j]
+        end
+    end
+
     plt = plot(
         xlabel = L"x / L_m", ylabel = "Normalized shape",
-        title = "Mode $i (rω = $(rω))",
-        legend = :right, lw = 2,
+        title = "Mode $i",
+        legend = :best, lw = 2,
         xlims = (-0.05, 1.0),
-        ylims = (-1.0, 1.0)
+        ylims = (-1.0, 1.0),
+        dpi = 300,
     )
 
     for (j, shape) in enumerate(shapes)
